@@ -1,0 +1,10 @@
+.skills-picker { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 8px; }
+.skill-pick-btn { padding: 6px 14px; border-radius: var(--radius-full); font-size: 0.82rem; font-weight: 600; border: 2px solid var(--gray-200); background: white; color: var(--gray-700); cursor: pointer; transition: var(--transition); }
+.skill-pick-btn:hover { border-color: var(--primary-light); }
+.skill-pick-btn.picked { border-color: var(--primary); background: var(--primary-bg); color: var(--primary); }
+.upload-zone { border: 2px dashed var(--gray-300); border-radius: var(--radius-md); padding: 32px; text-align: center; cursor: pointer; transition: var(--transition); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.upload-zone:hover { border-color: var(--primary); background: var(--primary-bg); }
+.upload-zone span { font-size: 2rem; }
+.upload-zone p { font-size: 0.88rem; color: var(--gray-600); }
+.verify-note { display: flex; align-items: center; gap: 8px; background: var(--gray-50); border-radius: var(--radius-md); padding: 12px 16px; font-size: 0.82rem; color: var(--gray-600); margin-bottom: 16px; }
+.verify-note svg { color: var(--success); flex-shrink: 0; }

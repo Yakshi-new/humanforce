@@ -1,0 +1,21 @@
+.provider-profile-card {}
+.provider-header { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.provider-big-avatar { width: 72px; height: 72px; background: var(--primary); color: white; border-radius: var(--radius-lg); font-size: 1.4rem; font-weight: 800; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.provider-info { flex: 1; }
+.provider-info h3 { font-size: 1.25rem; margin-bottom: 4px; }
+.provider-title { color: var(--gray-500); font-size: 0.88rem; margin-bottom: 12px; }
+.provider-meta { display: flex; gap: 16px; flex-wrap: wrap; font-size: 0.82rem; color: var(--gray-600); }
+.provider-meta span { display: flex; align-items: center; gap: 6px; }
+.provider-status-toggle { display: flex; align-items: center; gap: 10px; font-size: 0.88rem; font-weight: 600; }
+.requests-list { display: flex; flex-direction: column; gap: 16px; }
+.request-card { }
+.request-header { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; }
+.request-client-avatar { width: 44px; height: 44px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+.request-info { flex: 1; }
+.request-actions { display: flex; gap: 10px; flex-shrink: 0; align-items: center; }
+.review-header { display: flex; align-items: center; gap: 12px; }
+.review-avatar { width: 36px; height: 36px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+.review-name { font-weight: 700; font-size: 0.9rem; }
+.review-date { font-size: 0.78rem; color: var(--gray-400); }
+.review-stars { margin-left: auto; }
+.review-text { font-size: 0.9rem; color: var(--gray-600); }

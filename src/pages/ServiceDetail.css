@@ -1,0 +1,82 @@
+.detail-page { padding-top: var(--navbar-h); }
+.detail-hero { background: linear-gradient(135deg, var(--primary-bg), white); padding: 32px 0; }
+.breadcrumb { font-size: 0.85rem; color: var(--gray-500); display: flex; gap: 8px; align-items: center; }
+.breadcrumb a { color: var(--primary); }
+.breadcrumb span { color: var(--gray-700); }
+.detail-layout { display: grid; grid-template-columns: 1fr 360px; gap: 32px; padding: 32px 24px 80px; align-items: start; }
+.detail-main { display: flex; flex-direction: column; gap: 24px; }
+.detail-header-card { display: flex; gap: 24px; align-items: flex-start; }
+.detail-avatar-wrap { position: relative; flex-shrink: 0; }
+.detail-avatar { width: 80px; height: 80px; background: var(--primary); color: white; border-radius: var(--radius-lg); font-size: 2rem; font-weight: 900; display: flex; align-items: center; justify-content: center; }
+.detail-availability { position: absolute; bottom: -6px; left: 50%; transform: translateX(-50%); white-space: nowrap; background: white; border: 1px solid var(--gray-200); border-radius: var(--radius-full); font-size: 0.72rem; color: #43A047; font-weight: 600; padding: 2px 8px; }
+.detail-info { flex: 1; }
+.detail-title { font-size: 1.5rem; margin: 8px 0 12px; }
+.detail-meta { display: flex; align-items: center; gap: 20px; flex-wrap: wrap; }
+.detail-rating { display: flex; align-items: center; gap: 6px; font-size: 0.9rem; }
+.detail-rating strong { color: var(--gray-900); }
+.detail-rating span { color: var(--gray-400); }
+.detail-stat { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; color: var(--gray-600); }
+.detail-tabs { display: flex; gap: 8px; border-bottom: 2px solid var(--gray-200); }
+.tab-btn { padding: 12px 20px; font-weight: 600; font-size: 0.9rem; color: var(--gray-600); background: none; border: none; border-bottom: 2px solid transparent; margin-bottom: -2px; cursor: pointer; transition: var(--transition); }
+.tab-btn:hover { color: var(--primary); }
+.tab-active { color: var(--primary) !important; border-bottom-color: var(--primary) !important; }
+.tab-content h3 { margin-bottom: 8px; }
+.trust-badges { display: flex; gap: 16px; margin-top: 24px; flex-wrap: wrap; }
+.trust-badge-item { display: flex; align-items: center; gap: 8px; background: var(--gray-50); border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: 8px 16px; font-size: 0.85rem; font-weight: 600; color: var(--gray-700); }
+.tb-icon { color: var(--primary); }
+.skills-wrap { display: flex; flex-wrap: wrap; gap: 10px; }
+.skill-pill { background: var(--primary-bg); color: var(--primary); padding: 6px 14px; border-radius: var(--radius-full); font-size: 0.85rem; font-weight: 600; border: 1px solid var(--primary-light); }
+.deliverables-list { display: flex; flex-direction: column; gap: 12px; margin-top: 12px; }
+.deliverables-list li { display: flex; align-items: center; gap: 10px; font-size: 0.92rem; color: var(--gray-700); }
+.check-icon { color: var(--primary); flex-shrink: 0; }
+.reviews-list { display: flex; flex-direction: column; gap: 20px; margin-top: 16px; }
+.review-item { border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: 20px; }
+.review-header { display: flex; align-items: center; gap: 12px; margin-bottom: 12px; }
+.review-avatar { width: 36px; height: 36px; background: var(--primary); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; }
+.review-name { font-weight: 700; font-size: 0.9rem; }
+.review-date { font-size: 0.78rem; color: var(--gray-400); }
+.review-stars { margin-left: auto; color: #FFC107; }
+.review-text { font-size: 0.9rem; color: var(--gray-600); }
+.related-section h3 { margin-bottom: 16px; }
+.related-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; }
+.related-card { background: white; border: 1px solid var(--gray-200); border-radius: var(--radius-md); padding: 16px; transition: var(--transition); }
+.related-card:hover { border-color: var(--primary-light); box-shadow: var(--shadow-sm); }
+.related-card h4 { font-size: 0.9rem; margin-bottom: 8px; color: var(--gray-900); }
+.related-meta { display: flex; justify-content: space-between; align-items: center; }
+.stars-sm { color: #FFC107; font-size: 0.82rem; font-weight: 600; }
+.related-price { font-size: 0.82rem; font-weight: 600; color: var(--primary); }
+
+/* Sidebar */
+.detail-sidebar { position: sticky; top: calc(var(--navbar-h) + 16px); display: flex; flex-direction: column; gap: 16px; }
+.booking-card { display: flex; flex-direction: column; gap: 16px; }
+.booking-price { border-bottom: 1px solid var(--gray-200); padding-bottom: 16px; }
+.booking-from { font-size: 0.82rem; color: var(--gray-500); display: block; margin-bottom: 4px; }
+.booking-amount { font-size: 2.5rem; font-weight: 900; color: var(--gray-900); display: flex; align-items: baseline; gap: 2px; }
+.booking-amount span:first-child { font-size: 1.4rem; }
+.booking-unit { font-size: 1rem; font-weight: 500; color: var(--gray-500); margin-left: 4px; }
+.booking-form { display: flex; flex-direction: column; gap: 0; }
+.booking-total { display: flex; justify-content: space-between; align-items: center; background: var(--primary-bg); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 16px; font-size: 0.9rem; }
+.booking-total strong { color: var(--primary); font-size: 1.1rem; }
+.booking-btn { justify-content: center; width: 100%; font-size: 1rem; padding: 15px; }
+.booking-success { text-align: center; padding: 20px 0; }
+.booking-success .check-icon { color: var(--success); margin: 0 auto 12px; display: block; }
+.booking-success h4 { margin-bottom: 8px; }
+.whatsapp-contact { display: flex; align-items: center; justify-content: center; gap: 8px; padding: 12px; background: #E8F5E9; color: #2E7D32; border-radius: var(--radius-md); font-weight: 600; font-size: 0.88rem; transition: var(--transition); }
+.whatsapp-contact:hover { background: #C8E6C9; }
+.guarantee-card { display: flex; align-items: flex-start; gap: 14px; }
+.guarantee-card .check-icon { flex-shrink: 0; margin-top: 2px; }
+.guarantee-card strong { font-size: 0.9rem; display: block; margin-bottom: 4px; }
+.guarantee-card p { font-size: 0.82rem; }
+.price-slider { width: 100%; accent-color: var(--primary); margin: 8px 0; }
+.slider-labels { display: flex; justify-content: space-between; font-size: 0.78rem; color: var(--gray-400); }
+
+@media (max-width: 1024px) {
+  .detail-layout { grid-template-columns: 1fr; }
+  .detail-sidebar { position: static; }
+  .related-grid { grid-template-columns: repeat(2,1fr); }
+}
+@media (max-width: 640px) {
+  .detail-header-card { flex-direction: column; }
+  .detail-tabs { overflow-x: auto; }
+  .related-grid { grid-template-columns: 1fr; }
+}

@@ -1,0 +1,26 @@
+.pricing-grid-full { display: grid; grid-template-columns: repeat(3,1fr); gap: 28px; margin-bottom: 60px; }
+.price-card-full { background: white; border-radius: var(--radius-xl); border: 1px solid var(--gray-200); padding: 36px; position: relative; box-shadow: var(--shadow-sm); display: flex; flex-direction: column; transition: var(--transition); }
+.price-card-full:hover { box-shadow: var(--shadow-md); }
+.price-card-popular { border-color: var(--primary); box-shadow: var(--shadow-red); }
+.popular-ribbon { position: absolute; top: -14px; left: 50%; transform: translateX(-50%); background: var(--primary); color: white; padding: 5px 20px; border-radius: var(--radius-full); font-size: 0.78rem; font-weight: 700; white-space: nowrap; }
+.pcf-header { border-bottom: 1px solid var(--gray-100); padding-bottom: 24px; margin-bottom: 24px; }
+.pcf-name { font-size: 1rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; color: var(--gray-500); margin-bottom: 12px; }
+.pcf-price { display: flex; align-items: baseline; gap: 4px; margin-bottom: 8px; }
+.pcf-currency { font-size: 1.4rem; font-weight: 700; color: var(--gray-900); }
+.pcf-amount { font-size: 3rem; font-weight: 900; color: var(--gray-900); line-height: 1; }
+.pcf-unit { font-size: 1rem; color: var(--gray-400); margin-left: 4px; }
+.pcf-desc { font-size: 0.88rem; color: var(--gray-500); }
+.pcf-features { flex: 1; display: flex; flex-direction: column; gap: 10px; }
+.pcf-feature { display: flex; align-items: center; gap: 10px; font-size: 0.9rem; }
+.pcf-feature.included { color: var(--gray-700); }
+.pcf-feature.included svg { color: var(--primary); flex-shrink: 0; }
+.pcf-feature.not-included { color: var(--gray-400); }
+.addons-section { background: var(--gray-50); border-radius: var(--radius-xl); padding: 36px; margin-bottom: 48px; }
+.addons-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; }
+.addon-card { background: white; border-radius: var(--radius-md); border: 1px solid var(--gray-200); padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; font-size: 0.9rem; }
+.addon-price { font-weight: 700; color: var(--primary); }
+.pricing-guarantees { display: grid; grid-template-columns: repeat(3,1fr); gap: 24px; }
+.guarantee-block { text-align: center; padding: 32px 24px; }
+.guarantee-icon { width: 52px; height: 52px; background: var(--primary-bg); color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; }
+.guarantee-block h4 { margin-bottom: 8px; }
+@media (max-width: 900px) { .pricing-grid-full { grid-template-columns: 1fr; } .addons-grid { grid-template-columns: repeat(2,1fr); } .pricing-guarantees { grid-template-columns: 1fr; } }

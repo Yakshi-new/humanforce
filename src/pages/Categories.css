@@ -1,0 +1,14 @@
+.page-with-navbar { padding-top: var(--navbar-h); }
+.page-hero { background: linear-gradient(135deg, var(--primary-bg), white); padding: 64px 0; text-align: center; }
+.page-hero h1 { max-width: 600px; margin: 0 auto; }
+.categories-page-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 24px; }
+.cat-page-card { display: flex; gap: 20px; background: white; border-radius: var(--radius-lg); border: 1px solid var(--gray-200); padding: 28px; box-shadow: var(--shadow-sm); transition: var(--transition); }
+.cat-page-card:hover { box-shadow: var(--shadow-md); transform: translateY(-3px); border-color: var(--primary-light); }
+.cat-page-icon { width: 72px; height: 72px; border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.cat-page-body { flex: 1; }
+.cat-page-count { font-size: 0.78rem; font-weight: 600; color: var(--gray-400); text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px; }
+.cat-page-body h3 { font-size: 1.05rem; margin-bottom: 8px; }
+.cat-page-body p { font-size: 0.88rem; line-height: 1.6; margin-bottom: 14px; }
+.cat-page-cta { display: inline-flex; align-items: center; gap: 6px; font-size: 0.85rem; font-weight: 600; color: var(--primary); transition: var(--transition); }
+.cat-page-card:hover .cat-page-cta { gap: 10px; }
+@media (max-width: 768px) { .categories-page-grid { grid-template-columns: 1fr; } .cat-page-card { flex-direction: column; } }
