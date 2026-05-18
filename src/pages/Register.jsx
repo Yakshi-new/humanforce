@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Zap, ArrowRight, User, Briefcase, CheckCircle } from 'lucide-react'
+import { api } from '../utils/api'
 import './Auth.css'
 import './Register.css'
 
@@ -10,6 +11,7 @@ export default function Register() {
   const [step, setStep] = useState(0)
   const [role, setRole] = useState('')
   const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', password:'', company:'', bio:'', skills:[], idType:'', linkedin:'' })
+  const [error, setError] = useState('')
 
   const set = (k,v) => setForm(f => ({...f, [k]:v}))
   const next = () => setStep(s => Math.min(s+1, STEPS.length-1))
@@ -20,6 +22,29 @@ export default function Register() {
   const toggleSkill = sk => {
     const arr = form.skills.includes(sk) ? form.skills.filter(s=>s!==sk) : [...form.skills, sk]
     set('skills', arr)
+  }
+
+  const handleRegister = async (e) => {
+    e.preventDefault()
+    setError('')
+    try {
+      const payload = {
+        role,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        email: form.email,
+        phone: form.phone,
+        password: form.password,
+        company: form.company,
+        bio: form.bio,
+        skills: form.skills,
+        idType: form.idType
+      }
+      await api.register(payload)
+      next()
+    } catch (err) {
+      setError(err.message || 'Registration failed')
+    }
   }
 
   return (
@@ -41,6 +66,21 @@ export default function Register() {
         <div className="auth-box">
           <h2>Create Account</h2>
           <p className="auth-sub">Already have one? <Link to="/login" className="auth-link">Sign in</Link></p>
+
+          {error && (
+            <div className="auth-error-banner" style={{
+              background: 'rgba(229,57,53,0.1)',
+              border: '1px solid rgba(229,57,53,0.3)',
+              color: '#E53935',
+              padding: '10px 14px',
+              borderRadius: '6px',
+              fontSize: '0.85rem',
+              marginBottom: '16px',
+              fontWeight: 500
+            }}>
+              {error}
+            </div>
+          )}
 
           {/* Steps Indicator */}
           <div className="steps-indicator">
@@ -145,7 +185,7 @@ export default function Register() {
 
           {/* Step 3: Verification */}
           {step === 3 && (
-            <form onSubmit={e=>{e.preventDefault();next()}} style={{display:'flex',flexDirection:'column'}}>
+            <form onSubmit={handleRegister} style={{display:'flex',flexDirection:'column'}}>
               <div className="form-group">
                 <label className="form-label">ID Type</label>
                 <select className="form-input" value={form.idType} onChange={e=>set('idType',e.target.value)} required>

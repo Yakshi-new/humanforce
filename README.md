@@ -326,3 +326,23 @@ Built with ❤️ by **Harsdiya**
 <div align="center">
   <strong>⭐ If you found this helpful, give it a star on GitHub!</strong>
 </div>
+
+
+
+{
+  "rewrites": [
+    {
+      "source": "/api/:path*",
+      "destination": "https://your-backend-app.onrender.com/api/:path*"
+    },
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
+// {
+//   "rewrites": [
+//     { "source": "/(.*)", "destination": "/index.html" }
+//   ]
+// }

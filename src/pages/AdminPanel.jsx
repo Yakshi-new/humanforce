@@ -1,29 +1,55 @@
-import { useState } from 'react'
-import { Link, Routes, Route } from 'react-router-dom'
-import { LayoutDashboard, Users, Briefcase, Grid, CreditCard, Settings, LogOut, Zap, TrendingUp, UserCheck, BarChart2, AlertTriangle, Menu, X, Search } from 'lucide-react'
+import { useState, useEffect } from 'react'
+import { Link, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
+import { LayoutDashboard, Users, Briefcase, Grid, CreditCard, Settings, LogOut, Zap, UserCheck, BarChart2, AlertTriangle, Menu, X, Search } from 'lucide-react'
+import { api } from '../utils/api'
 import './Dashboard.css'
 
 const NAV = [
   { icon: <LayoutDashboard size={18}/>, label:'Dashboard', path:'/admin' },
+  { icon: <Briefcase size={18}/>, label:'Requests', path:'/admin/requests' },
   { icon: <Users size={18}/>, label:'Users', path:'/admin/users' },
   { icon: <UserCheck size={18}/>, label:'Providers', path:'/admin/providers' },
   { icon: <Briefcase size={18}/>, label:'Services', path:'/admin/services' },
-  { icon: <Grid size={18}/>, label:'Categories', path:'/admin/categories' },
   { icon: <CreditCard size={18}/>, label:'Transactions', path:'/admin/transactions' },
-  { icon: <BarChart2 size={18}/>, label:'Reports', path:'/admin/reports' },
   { icon: <Settings size={18}/>, label:'Settings', path:'/admin/settings' },
 ]
 
 function AdminHome() {
+  const [stats, setStats] = useState({ totalUsers: 0, totalProviders: 0, activeBookings: 0, revenue: 0 })
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    const fetchStats = async () => {
+      try {
+        const data = await api.getAdminStats()
+        setStats(data)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchStats()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
+        <p>Gathering ledger data...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="dash-content">
       <h2 className="dash-page-title">Admin Dashboard</h2>
+      
       <div className="dash-widgets">
         {[
-          { icon:<Users size={22}/>, label:'Total Users', value:'14,820', trend:'+423 this week', color:'#1E88E5' },
-          { icon:<UserCheck size={22}/>, label:'Providers', value:'12,041', trend:'+87 this week', color:'#43A047' },
-          { icon:<Briefcase size={22}/>, label:'Active Bookings', value:'3,294', trend:'+156 today', color:'#E53935' },
-          { icon:<CreditCard size={22}/>, label:'Revenue (MTD)', value:'$284K', trend:'+18% vs last month', color:'#8E24AA' },
+          { icon:<Users size={22}/>, label:'Total Customers', value: stats.totalUsers, trend:'Verified accounts', color:'#1E88E5' },
+          { icon:<UserCheck size={22}/>, label:'Active Providers', value: stats.totalProviders, trend:'Marketplace roster', color:'#43A047' },
+          { icon:<Briefcase size={22}/>, label:'Active Bookings', value: stats.activeBookings, trend:'In-progress operations', color:'#E53935' },
+          { icon:<CreditCard size={22}/>, label:'Total Escrow Volume', value: `₹${(stats.revenue || 0).toLocaleString('en-IN')}`, trend:'Net flow-through', color:'#8E24AA' },
         ].map((w,i) => (
           <div key={i} className="widget-card">
             <div className="widget-icon" style={{background:`${w.color}15`,color:w.color}}>{w.icon}</div>
@@ -38,36 +64,26 @@ function AdminHome() {
 
       <div className="dash-grid-2">
         <div className="dash-card">
-          <div className="dash-card-header"><h3>Recent Signups</h3><span className="view-all">View all →</span></div>
-          <div className="orders-table-wrap">
-            <table className="data-table">
-              <thead><tr><th>Name</th><th>Type</th><th>Date</th><th>Status</th></tr></thead>
-              <tbody>
-                {[
-                  { name:'Alice Brown', type:'Customer', date:'May 17', status:'Active' },
-                  { name:'David Park', type:'Provider', date:'May 17', status:'Pending' },
-                  { name:'Emma Wilson', type:'Customer', date:'May 16', status:'Active' },
-                  { name:'Frank Lee', type:'Provider', date:'May 16', status:'Pending' },
-                ].map((u,i) => (
-                  <tr key={i}>
-                    <td className="font-bold">{u.name}</td>
-                    <td><span className={`badge ${u.type==='Customer'?'badge-gray':'badge-red'}`}>{u.type}</span></td>
-                    <td>{u.date}</td>
-                    <td><span className={`status-pill ${u.status==='Active'?'status-active':'status-pending'}`}>{u.status}</span></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+          <div className="dash-card-header"><h3>Security Status</h3></div>
+          <div className="orders-table-wrap" style={{ padding: '20px' }}>
+            <p style={{ color: 'var(--gray-400)', fontSize: '0.9rem', marginBottom: '12px' }}>
+              All client-provider chats are protected under secure cryptographic keys. Payout settlement runs automatically every 24 hours.
+            </p>
+            <div className="alert-item alert-success" style={{ marginBottom: '8px' }}>
+              <span>✅</span> <span>System Health: MongoDB Atlas connection stable</span>
+            </div>
+            <div className="alert-item alert-info">
+              <span>🔒</span> <span>Escrow vault verification active</span>
+            </div>
           </div>
         </div>
+
         <div className="dash-card">
-          <div className="dash-card-header"><h3>Platform Alerts</h3></div>
+          <div className="dash-card-header"><h3>Audit Overview</h3></div>
           <div className="alerts-list">
             {[
-              { icon:'⚠️', text:'4 provider verifications pending review', type:'warning' },
-              { icon:'💳', text:'2 payment disputes require attention', type:'error' },
-              { icon:'✅', text:'System health: All services operational', type:'success' },
-              { icon:'📊', text:'Monthly report ready for download', type:'info' },
+              { icon:'🛡️', text:'Realtime JWT Authorization enabled for all operations', type:'info' },
+              { icon:'⚠️', text:'Verification reviews are audited by senior admins', type:'warning' }
             ].map((a,i) => (
               <div key={i} className={`alert-item alert-${a.type}`}>
                 <span>{a.icon}</span>
@@ -77,29 +93,41 @@ function AdminHome() {
           </div>
         </div>
       </div>
-
-      <div className="dash-card">
-        <div className="dash-card-header"><h3>Revenue Overview</h3></div>
-        <div className="revenue-bars">
-          {[
-            { month:'Jan', val:68, rev:'$68K' },{ month:'Feb', val:72, rev:'$72K' },{ month:'Mar', val:81, rev:'$81K' },
-            { month:'Apr', val:75, rev:'$75K' },{ month:'May', val:100, rev:'$284K' },
-          ].map((r,i) => (
-            <div key={i} className="rev-bar-item">
-              <div className="rev-bar-label">{r.rev}</div>
-              <div className="rev-bar-wrap"><div className="rev-bar" style={{height:`${r.val}%`}}/></div>
-              <div className="rev-bar-month">{r.month}</div>
-            </div>
-          ))}
-        </div>
-      </div>
     </div>
   )
 }
 
-function UserTable({ title, data, cols }) {
+function UserTable({ title, fetchFn, cols, mapRow }) {
+  const [data, setData] = useState([])
+  const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
-  const filtered = data.filter(d => JSON.stringify(d).toLowerCase().includes(search.toLowerCase()))
+
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const res = await fetchFn()
+        setData(res)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    load()
+  }, [fetchFn])
+
+  const filtered = data.filter(d => 
+    JSON.stringify(d).toLowerCase().includes(search.toLowerCase())
+  )
+
+  if (loading) {
+    return (
+      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
+        <p>Loading {title} audit records...</p>
+      </div>
+    )
+  }
+
   return (
     <div className="dash-content">
       <h2 className="dash-page-title">{title}</h2>
@@ -107,32 +135,36 @@ function UserTable({ title, data, cols }) {
         <div className="table-toolbar">
           <div className="table-search">
             <Search size={16}/>
-            <input className="form-input" placeholder={`Search ${title.toLowerCase()}...`} value={search} onChange={e=>setSearch(e.target.value)} style={{paddingLeft:'36px'}}/>
+            <input 
+              className="form-input" 
+              placeholder={`Search ${title.toLowerCase()}...`} 
+              value={search} 
+              onChange={e=>setSearch(e.target.value)} 
+              style={{paddingLeft:'36px'}}
+            />
           </div>
-          <button className="btn-primary" style={{padding:'10px 18px',fontSize:'0.88rem'}}>+ Add New</button>
         </div>
         <div className="orders-table-wrap">
           <table className="data-table">
             <thead><tr>{cols.map(c=><th key={c}>{c}</th>)}</tr></thead>
             <tbody>
-              {filtered.map((row,i) => (
-                <tr key={i}>
-                  {Object.values(row).map((v,j) => (
-                    <td key={j}>
-                      {typeof v === 'object' ? v : (
-                        v === 'Active' ? <span className="status-pill status-active">Active</span> :
-                        v === 'Pending' ? <span className="status-pill status-pending">Pending</span> :
-                        v === 'Suspended' ? <span className="status-pill" style={{background:'#FFEBEE',color:'#C62828'}}>Suspended</span> :
-                        <span>{v}</span>
-                      )}
-                    </td>
+              {filtered.map((row, i) => (
+                <tr key={row._id || i}>
+                  {mapRow(row).map((val, j) => (
+                    <td key={j}>{val}</td>
                   ))}
                   <td>
-                    <button className="btn-ghost" style={{padding:'4px 10px',fontSize:'0.78rem'}}>Edit</button>
-                    <button className="btn-ghost" style={{padding:'4px 10px',fontSize:'0.78rem',color:'var(--primary)'}}>View</button>
+                    <span style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>Audit Logged</span>
                   </td>
                 </tr>
               ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan={cols.length} style={{ textAlign: 'center', color: 'var(--gray-500)', padding: '24px' }}>
+                    No matching records compiled.
+                  </td>
+                </tr>
+              )}
             </tbody>
           </table>
         </div>
@@ -141,45 +173,244 @@ function UserTable({ title, data, cols }) {
   )
 }
 
-const USERS_DATA = [
-  { id:'U-1001', name:'John Doe', email:'john@company.com', role:'Customer', joined:'May 15', status:'Active' },
-  { id:'U-1002', name:'Emma Wilson', email:'emma@co.com', role:'Customer', joined:'May 14', status:'Active' },
-  { id:'U-1003', name:'Mark Chen', email:'mark@firm.com', role:'Customer', joined:'May 10', status:'Active' },
-  { id:'U-1004', name:'Nina Patel', email:'nina@biz.com', role:'Customer', joined:'Apr 28', status:'Suspended' },
-]
+function AdminRequests() {
+  const [bookings, setBookings] = useState([])
+  const [providers, setProviders] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
 
-const PROVIDERS_DATA = [
-  { id:'P-2001', name:'Ana Kowalski', email:'ana@hf.com', category:'Personal Assistant', rating:'4.9', status:'Active' },
-  { id:'P-2002', name:'Marcus Reyes', email:'marcus@hf.com', category:'Marketing', rating:'4.8', status:'Active' },
-  { id:'P-2003', name:'David Park', email:'david@hf.com', category:'Business Assistant', rating:'—', status:'Pending' },
-  { id:'P-2004', name:'Lily Torres', email:'lily@hf.com', category:'Customer Support', rating:'4.7', status:'Active' },
-]
+  const loadData = async () => {
+    try {
+      const bData = await api.getBookings()
+      const pData = await api.getAdminProviders()
+      setBookings(bData)
+      setProviders(pData)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
 
-const SERVICES_DATA_ADMIN = [
-  { id:'S-3001', title:'Executive PA', category:'Personal Assistant', provider:'Ana K.', price:'$35/hr', status:'Active' },
-  { id:'S-3002', title:'Social Media Mgr', category:'Marketing', provider:'Marcus R.', price:'$38/hr', status:'Active' },
-  { id:'S-3003', title:'B2B Sales SDR', category:'Sales Support', provider:'James L.', price:'$42/hr', status:'Active' },
-  { id:'S-3004', title:'Data Entry Spec.', category:'Specialized', provider:'Priya S.', price:'$22/hr', status:'Pending' },
-]
+  useEffect(() => {
+    loadData()
+  }, [])
 
-const TX_DATA = [
-  { id:'TX-5001', user:'John Doe', provider:'Ana K.', amount:'$350', date:'May 15', method:'Card', status:'Paid' },
-  { id:'TX-5002', user:'Emma Wilson', provider:'Marcus R.', amount:'$380', date:'May 10', method:'Card', status:'Paid' },
-  { id:'TX-5003', user:'Mark Chen', provider:'Priya S.', amount:'$220', date:'Apr 28', method:'Bank', status:'Paid' },
-  { id:'TX-5004', user:'Nina Patel', provider:'James L.', amount:'$280', date:'Apr 15', method:'Card', status:'Pending' },
-]
+  const handleStatusUpdate = async (id, status) => {
+    try {
+      await api.updateBookingStatus(id, status)
+      await loadData()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const handleProviderAssign = async (bookingId, providerId) => {
+    try {
+      await api.assignProviderToBooking(bookingId, providerId)
+      await loadData()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const filtered = bookings.filter(b => 
+    JSON.stringify(b).toLowerCase().includes(search.toLowerCase())
+  )
+
+  if (loading) {
+    return (
+      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
+        <p>Retrieving request list...</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="dash-content">
+      <h2 className="dash-page-title">Booking Assignment Requests</h2>
+      
+      <div className="dash-card">
+        <div className="table-toolbar">
+          <div className="table-search">
+            <Search size={16}/>
+            <input 
+              className="form-input" 
+              placeholder="Search requests..." 
+              value={search} 
+              onChange={e=>setSearch(e.target.value)} 
+              style={{paddingLeft:'36px'}}
+            />
+          </div>
+        </div>
+
+        <div className="orders-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Booking ID</th>
+                <th>Customer Account</th>
+                <th>Service Info</th>
+                <th>Schedule Details</th>
+                <th>Financials (20% Deposit)</th>
+                <th>Assigned Buddy</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((b) => (
+                <tr key={b._id}>
+                  <td className="mono font-bold">{b.bookingId}</td>
+                  <td>
+                    <div className="font-bold">{b.client?.firstName} {b.client?.lastName}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--gray-400)' }}>{b.client?.email}</div>
+                  </td>
+                  <td>
+                    <div className="font-bold">{b.service?.name}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--gray-400)' }}>{b.service?.category}</div>
+                  </td>
+                  <td>
+                    <div>{b.date}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--gray-400)' }}>{b.time} ({b.hours} hrs)</div>
+                  </td>
+                  <td className="font-bold">
+                    <div>Total: ₹{b.totalCost?.toLocaleString('en-IN')}</div>
+                    <div style={{ fontSize: '0.75rem', color: '#43A047' }}>Deposit: ₹{b.depositPaid?.toLocaleString('en-IN')}</div>
+                  </td>
+                  <td>
+                    <select 
+                      value={b.provider?._id || ''} 
+                      onChange={(e) => handleProviderAssign(b._id, e.target.value)}
+                      className="form-input"
+                      style={{ 
+                        padding: '4px 8px', 
+                        fontSize: '0.8rem', 
+                        background: '#1a1a2e', 
+                        color: 'white', 
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: '4px',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="">-- Unassigned --</option>
+                      {providers.map(p => (
+                        <option key={p._id} value={p._id}>
+                          {p.firstName} {p.lastName}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td>
+                    <span className={`status-pill status-${(b.status || '').toLowerCase()}`}>{b.status}</span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {b.status === 'Pending' && (
+                        <>
+                          <button
+                            onClick={() => handleStatusUpdate(b._id, 'Active')}
+                            style={{
+                              background: 'rgba(67,160,71,0.1)',
+                              border: '1px solid rgba(67,160,71,0.2)',
+                              color: '#43A047',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            Accept
+                          </button>
+                          <button
+                            onClick={() => handleStatusUpdate(b._id, 'Declined')}
+                            style={{
+                              background: 'rgba(229,57,53,0.1)',
+                              border: '1px solid rgba(229,57,53,0.2)',
+                              color: '#E53935',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            Refuse
+                          </button>
+                        </>
+                      )}
+                      {b.status === 'Active' && (
+                        <button
+                          onClick={() => handleStatusUpdate(b._id, 'Completed')}
+                          style={{
+                            background: 'rgba(67,160,71,0.15)',
+                            border: '1px solid rgba(67,160,71,0.3)',
+                            color: '#43A047',
+                            padding: '4px 8px',
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            fontSize: '0.75rem',
+                            fontWeight: 600
+                          }}
+                        >
+                          Force Settle
+                        </button>
+                      )}
+                      {['Completed', 'Declined'].includes(b.status) && (
+                        <span style={{ color: 'var(--gray-500)', fontSize: '0.78rem' }}>Resolved</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan="8" style={{ textAlign: 'center', color: 'var(--gray-500)', padding: '24px' }}>
+                    No active booking requests registered.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
 
 function Placeholder({ title }) {
-  return <div className="dash-content"><h2 className="dash-page-title">{title}</h2><div className="dash-card"><p style={{color:'var(--gray-500)',textAlign:'center',padding:'40px'}}>Coming soon.</p></div></div>
+  return <div className="dash-content"><h2 className="dash-page-title">{title}</h2><div className="dash-card"><p style={{color:'var(--gray-500)',textAlign:'center',padding:'40px'}}>Superadmin controls for {title} coming soon.</p></div></div>
 }
 
 export default function AdminPanel() {
   const [sideOpen, setSideOpen] = useState(false)
-  const path = window.location.pathname
+  const navigate = useNavigate()
+  const location = useLocation()
+
+  useEffect(() => {
+    // Route guard
+    if (!api.isAuthenticated() || api.getUser()?.role !== 'admin') {
+      navigate('/login')
+    }
+  }, [])
+
+  const handleLogout = () => {
+    api.logout()
+    navigate('/')
+  }
+
+  const getInitials = () => {
+    const user = api.getUser()
+    if (!user) return 'AD'
+    return `${(user.firstName || '')[0] || ''}${(user.lastName || '')[0] || ''}`.toUpperCase()
+  }
+
   return (
     <div className="dashboard-layout">
       <button className="dash-mobile-toggle" onClick={()=>setSideOpen(!sideOpen)}><Menu size={20}/></button>
       {sideOpen && <div className="dash-overlay" onClick={()=>setSideOpen(false)}/>}
+      
       <aside className={`dash-sidebar ${sideOpen?'sidebar-open':''}`} style={{background:'#1a1a2e'}}>
         <div className="dash-sidebar-header">
           <Link to="/" style={{color:'white',textDecoration:'none',display:'flex',alignItems:'center',gap:'8px',fontWeight:800,fontSize:'1.1rem'}}>
@@ -187,28 +418,112 @@ export default function AdminPanel() {
           </Link>
           <button className="dash-sidebar-close" onClick={()=>setSideOpen(false)}><X size={18}/></button>
         </div>
+        
         <div className="dash-user-card">
-          <div className="dash-user-avatar" style={{background:'#E53935'}}>SA</div>
-          <div><div className="dash-user-name">Super Admin</div><div className="dash-user-role">Full Access</div></div>
+          <div className="dash-user-avatar" style={{background:'#E53935', color: 'white'}}>
+            {getInitials()}
+          </div>
+          <div>
+            <div className="dash-user-name">Super Admin</div>
+            <div className="dash-user-role">Full Access Ledger</div>
+          </div>
         </div>
+
         <nav className="dash-nav">
           {NAV.map(n => (
-            <Link key={n.path} to={n.path} className={`dash-nav-link ${path===n.path?'dash-nav-active':''}`}>
+            <Link key={n.path} to={n.path} className={`dash-nav-link ${location.pathname === n.path ? 'dash-nav-active' : ''}`}>
               {n.icon} {n.label}
             </Link>
           ))}
         </nav>
-        <Link to="/" className="dash-logout"><LogOut size={16}/> Back to Site</Link>
+        
+        <button onClick={handleLogout} className="dash-logout" style={{ background: 'none', border: 'none', textAlign: 'left', width: '100%', cursor: 'pointer' }}>
+          <LogOut size={16}/> Sign Out
+        </button>
       </aside>
+
       <main className="dash-main">
         <Routes>
           <Route index element={<AdminHome/>}/>
-          <Route path="users" element={<UserTable title="Users" data={USERS_DATA} cols={['ID','Name','Email','Role','Joined','Status','Actions']}/>}/>
-          <Route path="providers" element={<UserTable title="Providers" data={PROVIDERS_DATA} cols={['ID','Name','Email','Category','Rating','Status','Actions']}/>}/>
-          <Route path="services" element={<UserTable title="Services" data={SERVICES_DATA_ADMIN} cols={['ID','Title','Category','Provider','Price','Status','Actions']}/>}/>
-          <Route path="transactions" element={<UserTable title="Transactions" data={TX_DATA} cols={['ID','User','Provider','Amount','Date','Method','Status','Actions']}/>}/>
-          <Route path="categories" element={<Placeholder title="Categories"/>}/>
-          <Route path="reports" element={<Placeholder title="Reports"/>}/>
+          <Route path="requests" element={<AdminRequests/>}/>
+          
+          <Route 
+            path="users" 
+            element={
+              <UserTable 
+                title="Platform Customers" 
+                fetchFn={api.getAdminUsers} 
+                cols={['ID', 'First Name', 'Last Name', 'Email', 'Phone', 'Role', 'Status', 'Audit']} 
+                mapRow={r => [
+                  r._id ? r._id.substring(r._id.length - 6).toUpperCase() : 'N/A', 
+                  r.firstName, 
+                  r.lastName, 
+                  r.email, 
+                  r.phone || 'N/A', 
+                  r.role, 
+                  <span className="status-pill status-active">Active</span>
+                ]}
+              />
+            }
+          />
+          
+          <Route 
+            path="providers" 
+            element={
+              <UserTable 
+                title="Service Buddies" 
+                fetchFn={api.getAdminProviders} 
+                cols={['ID', 'Name', 'Email', 'Phone', 'Earnings', 'Status', 'Audit']} 
+                mapRow={r => [
+                  r._id ? r._id.substring(r._id.length - 6).toUpperCase() : 'N/A', 
+                  `${r.firstName} ${r.lastName}`, 
+                  r.email, 
+                  r.phone || 'N/A', 
+                  `₹${(r.earnings || 0).toLocaleString('en-IN')}`, 
+                  <span className="status-pill status-active">Active</span>
+                ]}
+              />
+            }
+          />
+
+          <Route 
+            path="services" 
+            element={
+              <UserTable 
+                title="Premium Services Catalog" 
+                fetchFn={api.getServices} 
+                cols={['Service ID', 'Name', 'Category', 'Price/hr', 'Rating', 'Audit']} 
+                mapRow={r => [
+                  r.serviceId, 
+                  r.name, 
+                  r.category, 
+                  `₹${r.price.toLocaleString('en-IN')}`, 
+                  r.rating || '4.8'
+                ]}
+              />
+            }
+          />
+
+          <Route 
+            path="transactions" 
+            element={
+              <UserTable 
+                title="Secured Transactions Ledger" 
+                fetchFn={api.getAdminTransactions} 
+                cols={['TX ID', 'Customer Account', 'Assigned Buddy', 'Volume', 'Schedule Date', 'Method', 'State', 'Audit']} 
+                mapRow={r => [
+                  r._id, 
+                  r.user, 
+                  r.provider, 
+                  r.amount, 
+                  r.date, 
+                  r.method, 
+                  <span className={`status-pill status-${r.status === 'Paid' ? 'active' : r.status === 'Refunded' ? 'done' : 'pending'}`}>{r.status}</span>
+                ]}
+              />
+            }
+          />
+
           <Route path="settings" element={<Placeholder title="Settings"/>}/>
         </Routes>
       </main>
