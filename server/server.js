@@ -17,6 +17,7 @@ import serviceRoutes, { seedServicesIfNeeded } from './routes/serviceRoutes.js'
 import bookingRoutes from './routes/bookingRoutes.js'
 import messageRoutes from './routes/messageRoutes.js'
 import adminRoutes from './routes/adminRoutes.js'
+import enquiryRoutes from './routes/enquiryRoutes.js'
 
 dotenv.config()
 
@@ -33,6 +34,7 @@ app.use('/api/services', serviceRoutes)
 app.use('/api/bookings', bookingRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/admin', adminRoutes)
+app.use('/api/enquiries', enquiryRoutes)
 
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {

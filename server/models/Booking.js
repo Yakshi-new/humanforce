@@ -11,6 +11,9 @@ const bookingSchema = new mongoose.Schema({
   note: { type: String, default: '' },
   totalCost: { type: Number, required: true },
   depositPaid: { type: Number, required: true },
+  remainingPaid: { type: Boolean, default: false },
+  razorpayPaymentId: { type: String, default: '' },
+  remainingPaymentId: { type: String, default: '' },
   status: { type: String, enum: ['Pending', 'Active', 'Completed', 'Declined'], default: 'Pending' },
   createdAt: { type: Date, default: Date.now }
 })

@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
-import { Link, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, Users, Briefcase, Grid, CreditCard, Settings, LogOut, Zap, UserCheck, BarChart2, AlertTriangle, Menu, X, Search } from 'lucide-react'
+import { Link, Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
+import { LayoutDashboard, Users, Briefcase, Grid, CreditCard, Settings, LogOut, Zap, UserCheck, BarChart2, AlertTriangle, Menu, X, Search, PlayCircle, CheckCircle, History, Mail } from 'lucide-react'
 import { api } from '../utils/api'
 import './Dashboard.css'
 
@@ -11,11 +11,22 @@ const NAV = [
   { icon: <UserCheck size={18}/>, label:'Providers', path:'/admin/providers' },
   { icon: <Briefcase size={18}/>, label:'Services', path:'/admin/services' },
   { icon: <CreditCard size={18}/>, label:'Transactions', path:'/admin/transactions' },
+  { icon: <Mail size={18}/>, label:'Enquiries', path:'/admin/enquiries' },
+  { icon: <History size={18}/>, label:'Log History', path:'/admin/logs' },
   { icon: <Settings size={18}/>, label:'Settings', path:'/admin/settings' },
 ]
 
 function AdminHome() {
-  const [stats, setStats] = useState({ totalUsers: 0, totalProviders: 0, activeBookings: 0, revenue: 0 })
+  const [stats, setStats] = useState({ 
+    totalUsers: 0, 
+    totalProviders: 0, 
+    activeBookings: 0, 
+    revenue: 0,
+    platformCommission: 0,
+    runningOperations: 0,
+    completedOperations: 0,
+    upcomingBookings: []
+  })
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
@@ -46,20 +57,110 @@ function AdminHome() {
       
       <div className="dash-widgets">
         {[
-          { icon:<Users size={22}/>, label:'Total Customers', value: stats.totalUsers, trend:'Verified accounts', color:'#1E88E5' },
-          { icon:<UserCheck size={22}/>, label:'Active Providers', value: stats.totalProviders, trend:'Marketplace roster', color:'#43A047' },
-          { icon:<Briefcase size={22}/>, label:'Active Bookings', value: stats.activeBookings, trend:'In-progress operations', color:'#E53935' },
-          { icon:<CreditCard size={22}/>, label:'Total Escrow Volume', value: `₹${(stats.revenue || 0).toLocaleString('en-IN')}`, trend:'Net flow-through', color:'#8E24AA' },
+          { icon:<Users size={22}/>, label:'Total Customers', value: stats.totalUsers || 0, trend:'Verified accounts', color:'#1E88E5' },
+          { icon:<UserCheck size={22}/>, label:'Active Providers', value: stats.totalProviders || 0, trend:'Marketplace roster', color:'#43A047' },
+          { icon:<PlayCircle size={22}/>, label:'Running Operations', value: stats.runningOperations || 0, trend:'In-progress bookings', color:'#FF9800' },
+          { icon:<CheckCircle size={22}/>, label:'Complete Operations', value: stats.completedOperations || 0, trend:'Successfully finished', color:'#00ACC1' },
+          { icon:<CreditCard size={22}/>, label:'Total Escrow Volume', value: `₹${(stats.revenue || 0).toLocaleString('en-IN')}`, trend:'Net booking value', color:'#8E24AA' },
+          { icon:<CreditCard size={22}/>, label:'Platform Commission', value: `₹${(stats.platformCommission || 0).toLocaleString('en-IN')}`, trend:'20% deposit escrow cut', color:'#E53935' },
         ].map((w,i) => (
           <div key={i} className="widget-card">
             <div className="widget-icon" style={{background:`${w.color}15`,color:w.color}}>{w.icon}</div>
             <div className="widget-info">
               <div className="widget-value">{w.value}</div>
               <div className="widget-label">{w.label}</div>
-              <div className="widget-trend">{w.trend}</div>
+              <div className="widget-trend" style={{color:w.color}}>{w.trend}</div>
             </div>
           </div>
         ))}
+      </div>
+
+      {/* Pending & Upcoming Bookings Section (Today & Tomorrow) */}
+      <div className="dash-card" style={{ marginBottom: '28px' }}>
+        <div className="dash-card-header" style={{ borderBottom: '1px solid var(--gray-200)', paddingBottom: '14px', marginBottom: '16px' }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
+            📅 Pending & Upcoming Operations (Today & Tomorrow)
+          </h3>
+          <span className="status-pill status-active" style={{ fontSize: '0.78rem' }}>
+            {(stats.upcomingBookings || []).length} Scheduled
+          </span>
+        </div>
+        
+        <div className="orders-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Booking ID</th>
+                <th>Client Details</th>
+                <th>Buddy Details</th>
+                <th>Service Info</th>
+                <th>Schedule Date & Time</th>
+                <th>Escrow Cost Breakdown</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(stats.upcomingBookings || []).map((b) => (
+                <tr key={b._id}>
+                  <td className="mono font-bold">{b.bookingId}</td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#1E88E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', overflow: 'hidden', flexShrink: 0 }}>
+                        {b.client?.avatar ? (
+                          <img src={b.client.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          b.client?.firstName?.[0] || 'C'
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-bold">{b.client?.firstName} {b.client?.lastName}</div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--gray-500)' }}>{b.client?.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    {b.provider ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#43A047', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', overflow: 'hidden', flexShrink: 0 }}>
+                          {b.provider?.avatar ? (
+                            <img src={b.provider.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            b.provider?.firstName?.[0] || 'P'
+                          )}
+                        </div>
+                        <div className="font-bold">{b.provider?.firstName} {b.provider?.lastName}</div>
+                      </div>
+                    ) : (
+                      <span style={{ color: '#FF9800', fontStyle: 'italic', fontWeight: 600 }}>Unassigned Buddy</span>
+                    )}
+                  </td>
+                  <td>
+                    <div className="font-bold">{b.service?.name}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--gray-500)' }}>{b.service?.category}</div>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{b.date}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--gray-500)' }}>{b.time} ({b.hours} hrs)</div>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 700 }}>Total: ₹{b.totalCost?.toLocaleString('en-IN')}</div>
+                    <div style={{ fontSize: '0.78rem', color: '#43A047', fontWeight: 600 }}>Deposit (20%): ₹{b.depositPaid?.toLocaleString('en-IN')}</div>
+                  </td>
+                  <td>
+                    <span className={`status-pill status-${(b.status || '').toLowerCase()}`}>{b.status}</span>
+                  </td>
+                </tr>
+              ))}
+              {(stats.upcomingBookings || []).length === 0 && (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', color: 'var(--gray-500)', padding: '36px 0' }}>
+                    🏖️ No pending or upcoming operations scheduled for today or tomorrow.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
       </div>
 
       <div className="dash-grid-2">
@@ -263,8 +364,19 @@ function AdminRequests() {
                 <tr key={b._id}>
                   <td className="mono font-bold">{b.bookingId}</td>
                   <td>
-                    <div className="font-bold">{b.client?.firstName} {b.client?.lastName}</div>
-                    <div style={{ fontSize: '0.78rem', color: 'var(--gray-400)' }}>{b.client?.email}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#1E88E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', overflow: 'hidden', flexShrink: 0 }}>
+                        {b.client?.avatar ? (
+                          <img src={b.client.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          b.client?.firstName?.[0] || 'C'
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-bold">{b.client?.firstName} {b.client?.lastName}</div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--gray-400)' }}>{b.client?.email}</div>
+                      </div>
+                    </div>
                   </td>
                   <td>
                     <div className="font-bold">{b.service?.name}</div>
@@ -383,6 +495,456 @@ function Placeholder({ title }) {
   return <div className="dash-content"><h2 className="dash-page-title">{title}</h2><div className="dash-card"><p style={{color:'var(--gray-500)',textAlign:'center',padding:'40px'}}>Superadmin controls for {title} coming soon.</p></div></div>
 }
 
+function AdminUserActivity() {
+  const { id } = useParams()
+  const navigate = useNavigate()
+  const [data, setData] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const fetchActivity = async () => {
+      try {
+        setLoading(true)
+        const res = await api.getAdminUserActivity(id)
+        setData(res)
+      } catch (err) {
+        console.error(err)
+        setError('Failed to compile activity records for this user.')
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchActivity()
+  }, [id])
+
+  if (loading) {
+    return (
+      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
+        <p>Analyzing user operational registry...</p>
+      </div>
+    )
+  }
+
+  if (error || !data) {
+    return (
+      <div className="dash-content">
+        <button 
+          onClick={() => navigate(-1)} 
+          style={{ 
+            background: 'var(--primary)', 
+            border: 'none', 
+            color: 'white', 
+            padding: '8px 16px', 
+            borderRadius: '6px', 
+            cursor: 'pointer',
+            fontWeight: 600,
+            marginBottom: '20px'
+          }}
+        >
+          ← Back to Directory
+        </button>
+        <div className="dash-card" style={{ padding: '40px', textAlign: 'center' }}>
+          <p style={{ color: 'var(--danger)', fontWeight: 600 }}>{error || 'User not found'}</p>
+        </div>
+      </div>
+    )
+  }
+
+  const { user, bookings } = data
+
+  return (
+    <div className="dash-content">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+        <h2 className="dash-page-title" style={{ margin: 0 }}>User Activity Profile</h2>
+        <button 
+          onClick={() => navigate(-1)} 
+          style={{ 
+            background: 'rgba(255,255,255,0.08)', 
+            border: '1px solid rgba(255,255,255,0.1)', 
+            color: 'var(--gray-700)', 
+            padding: '8px 16px', 
+            borderRadius: '6px', 
+            cursor: 'pointer',
+            fontWeight: 600
+          }}
+        >
+          ← Back
+        </button>
+      </div>
+
+      {/* User Information Profile Card */}
+      <div className="dash-card" style={{ marginBottom: '28px', background: 'linear-gradient(135deg, #1e1e38 0%, #15152b 100%)', border: '1px solid rgba(255,255,255,0.08)', color: 'white' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
+          <div style={{ 
+            width: '64px', 
+            height: '64px', 
+            borderRadius: '12px', 
+            background: user.role === 'provider' ? '#43A047' : '#1E88E5', 
+            color: 'white',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            overflow: 'hidden'
+          }}>
+            {user.avatar ? (
+              <img src={user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              <span style={{ fontSize: '1.8rem' }}>{user.role === 'provider' ? '🛡️' : '👤'}</span>
+            )}
+          </div>
+          <div>
+            <h3 style={{ fontSize: '1.4rem', fontWeight: 800, margin: 0, color: 'white' }}>
+              {user.firstName} {user.lastName}
+            </h3>
+            <span className="status-pill status-active" style={{ textTransform: 'capitalize', marginTop: '6px', display: 'inline-block' }}>
+              {user.role} Account
+            </span>
+          </div>
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginTop: '24px', paddingTop: '20px', borderTop: '1px solid rgba(255,255,255,0.08)' }}>
+          <div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Email Address</div>
+            <div style={{ fontSize: '1rem', fontWeight: 600, marginTop: '4px', wordBreak: 'break-all', color: 'white' }}>{user.email}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Phone Number</div>
+            <div style={{ fontSize: '1rem', fontWeight: 600, marginTop: '4px', color: 'white' }}>{user.phone || 'Not Provided'}</div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.78rem', color: 'var(--gray-400)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Account ID</div>
+            <div className="mono" style={{ fontSize: '0.9rem', fontWeight: 600, marginTop: '4px', color: 'var(--gray-300)' }}>{user._id}</div>
+          </div>
+        </div>
+      </div>
+
+      {/* Operational Service History Ledger */}
+      <div className="dash-card">
+        <div className="dash-card-header" style={{ borderBottom: '1px solid var(--gray-100)', paddingBottom: '14px', marginBottom: '16px' }}>
+          <h3 style={{ margin: 0, display: 'flex', alignItems: 'center', gap: '8px' }}>
+            💼 Operations, Scheduling & Escrow Ledger
+          </h3>
+          <span className="status-pill status-active" style={{ fontSize: '0.78rem' }}>
+            {bookings.length} Booking Records
+          </span>
+        </div>
+
+        <div className="orders-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Booking ID</th>
+                <th>Service Detail</th>
+                <th>Date & Time</th>
+                <th>Client Details</th>
+                <th>Assigned Buddy</th>
+                <th>Escrow Breakdown</th>
+                <th>Operation State</th>
+                <th>Payment Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {bookings.map((b) => (
+                <tr key={b._id}>
+                  <td className="mono font-bold">{b.bookingId}</td>
+                  <td>
+                    <div className="font-bold">{b.service?.name}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--gray-500)' }}>{b.service?.category}</div>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{b.date}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--gray-500)' }}>{b.time} ({b.hours} hrs)</div>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{b.client?.firstName} {b.client?.lastName}</div>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--gray-400)' }}>{b.client?.phone}</div>
+                  </td>
+                  <td>
+                    {b.provider ? (
+                      <div>
+                        <div style={{ fontWeight: 600 }}>{b.provider?.firstName} {b.provider?.lastName}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--gray-400)' }}>{b.provider?.phone}</div>
+                      </div>
+                    ) : (
+                      <span style={{ color: '#FF9800', fontStyle: 'italic', fontWeight: 600 }}>Unassigned</span>
+                    )}
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 700 }}>Total: ₹{b.totalCost?.toLocaleString('en-IN')}</div>
+                    <div style={{ fontSize: '0.78rem', color: '#43A047', fontWeight: 600 }}>Deposit (20%): ₹{b.depositPaid?.toLocaleString('en-IN')}</div>
+                  </td>
+                  <td>
+                    <span className={`status-pill status-${(b.status || '').toLowerCase()}`}>{b.status}</span>
+                  </td>
+                  <td>
+                    {b.remainingPaid ? (
+                      <span className="status-pill status-active" style={{ fontSize: '0.75rem' }}>Fully Paid (100%)</span>
+                    ) : (
+                      <span className="status-pill status-pending" style={{ fontSize: '0.75rem' }}>Deposit Secured (20%)</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+              {bookings.length === 0 && (
+                <tr>
+                  <td colSpan="8" style={{ textAlign: 'center', color: 'var(--gray-500)', padding: '36px 0' }}>
+                    📭 No active, running, or completed booking records logged for this user.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AdminEnquiries() {
+  const [enquiries, setEnquiries] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+
+  const loadEnquiries = async () => {
+    try {
+      const data = await api.getEnquiries()
+      setEnquiries(data)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadEnquiries()
+  }, [])
+
+  const handleStatusUpdate = async (id, status) => {
+    try {
+      await api.updateEnquiryStatus(id, status)
+      await loadEnquiries()
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  const filtered = enquiries.filter(e => 
+    JSON.stringify(e).toLowerCase().includes(search.toLowerCase())
+  )
+
+  if (loading) {
+    return (
+      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
+        <p>Loading contact enquiries...</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="dash-content">
+      <h2 className="dash-page-title">Contact Enquiries</h2>
+      
+      <div className="dash-card">
+        <div className="table-toolbar">
+          <div className="table-search">
+            <Search size={16}/>
+            <input 
+              className="form-input" 
+              placeholder="Search enquiries..." 
+              value={search} 
+              onChange={e=>setSearch(e.target.value)} 
+              style={{paddingLeft:'36px'}}
+            />
+          </div>
+        </div>
+
+        <div className="orders-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Name</th>
+                <th>Contact Details</th>
+                <th>Subject</th>
+                <th>Message</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((e) => (
+                <tr key={e._id}>
+                  <td>{new Date(e.createdAt).toLocaleDateString()}</td>
+                  <td className="font-bold">{e.name}</td>
+                  <td>
+                    <div>{e.email}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--gray-500)' }}>{e.phone || 'No phone'}</div>
+                  </td>
+                  <td className="font-bold">{e.subject}</td>
+                  <td style={{ maxWidth: '300px', whiteSpace: 'normal', fontSize: '0.85rem' }}>{e.message}</td>
+                  <td>
+                    <span className={`status-pill status-${e.status === 'Resolved' ? 'active' : e.status === 'In-Progress' ? 'pending' : 'done'}`} style={{ fontSize: '0.78rem' }}>
+                      {e.status}
+                    </span>
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', gap: '6px' }}>
+                      {e.status !== 'Resolved' && (
+                        <>
+                          {e.status === 'New' && (
+                            <button
+                              onClick={() => handleStatusUpdate(e._id, 'In-Progress')}
+                              style={{
+                                background: 'rgba(251,140,0,0.1)',
+                                border: '1px solid rgba(251,140,0,0.2)',
+                                color: '#FB8C00',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '0.75rem',
+                                fontWeight: 600
+                              }}
+                            >
+                              In Progress
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleStatusUpdate(e._id, 'Resolved')}
+                            style={{
+                              background: 'rgba(67,160,71,0.1)',
+                              border: '1px solid rgba(67,160,71,0.2)',
+                              color: '#43A047',
+                              padding: '4px 8px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            Resolve
+                          </button>
+                        </>
+                      )}
+                      {e.status === 'Resolved' && (
+                        <span style={{ color: 'var(--gray-500)', fontSize: '0.78rem' }}>Closed</span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', color: 'var(--gray-500)', padding: '24px' }}>
+                    No matching enquiries registered.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AdminLogs() {
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+
+  useEffect(() => {
+    const fetchLogs = async () => {
+      try {
+        const data = await api.getAdminLogs()
+        setLogs(data)
+      } catch (err) {
+        console.error(err)
+      } finally {
+        setLoading(false)
+      }
+    }
+    fetchLogs()
+  }, [])
+
+  const filtered = logs.filter(l =>
+    JSON.stringify(l).toLowerCase().includes(search.toLowerCase())
+  )
+
+  if (loading) {
+    return (
+      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
+        <p>Loading activity logs registry...</p>
+      </div>
+    )
+  }
+
+  return (
+    <div className="dash-content">
+      <h2 className="dash-page-title">User & Provider Activity Registry</h2>
+      
+      <div className="dash-card">
+        <div className="table-toolbar">
+          <div className="table-search">
+            <Search size={16}/>
+            <input 
+              className="form-input" 
+              placeholder="Search logs by email, name, role or action..." 
+              value={search} 
+              onChange={e=>setSearch(e.target.value)} 
+              style={{paddingLeft:'36px'}}
+            />
+          </div>
+        </div>
+
+        <div className="orders-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Timestamp</th>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Role</th>
+                <th>Action</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map((log) => (
+                <tr key={log._id}>
+                  <td>{new Date(log.timestamp).toLocaleString()}</td>
+                  <td>{log.name}</td>
+                  <td>{log.email}</td>
+                  <td style={{ textTransform: 'capitalize' }}>{log.role}</td>
+                  <td>
+                    <span style={{
+                      fontWeight: 600,
+                      color: log.action === 'Login' ? '#43A047' : log.action === 'Auto-Logout' ? '#E53935' : '#FB8C00'
+                    }}>
+                      {log.action}
+                    </span>
+                  </td>
+                  <td>
+                    <span className="status-pill status-active">Recorded</span>
+                  </td>
+                </tr>
+              ))}
+              {filtered.length === 0 && (
+                <tr>
+                  <td colSpan="6" style={{ textAlign: 'center', color: 'var(--gray-500)', padding: '24px' }}>
+                    No activity logs recorded.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 export default function AdminPanel() {
   const [sideOpen, setSideOpen] = useState(false)
   const navigate = useNavigate()
@@ -420,8 +982,12 @@ export default function AdminPanel() {
         </div>
         
         <div className="dash-user-card">
-          <div className="dash-user-avatar" style={{background:'#E53935', color: 'white'}}>
-            {getInitials()}
+          <div className="dash-user-avatar" style={{background:'#E53935', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden'}}>
+            {api.getUser()?.avatar ? (
+              <img src={api.getUser().avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              getInitials()
+            )}
           </div>
           <div>
             <div className="dash-user-name">Super Admin</div>
@@ -453,19 +1019,29 @@ export default function AdminPanel() {
               <UserTable 
                 title="Platform Customers" 
                 fetchFn={api.getAdminUsers} 
-                cols={['ID', 'First Name', 'Last Name', 'Email', 'Phone', 'Role', 'Status', 'Audit']} 
+                cols={['ID', 'Full Name', 'Email', 'Phone', 'Last Login', 'Role', 'Status', 'Audit']} 
                 mapRow={r => [
                   r._id ? r._id.substring(r._id.length - 6).toUpperCase() : 'N/A', 
-                  r.firstName, 
-                  r.lastName, 
-                  r.email, 
+                  <Link to={`/admin/users/${r._id}`} style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#1E88E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', overflow: 'hidden', flexShrink: 0 }}>
+                      {r.avatar ? (
+                        <img src={r.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        r.firstName?.[0] || 'U'
+                      )}
+                    </div>
+                    {r.firstName} {r.lastName}
+                  </Link>,
+                  r.email,
                   r.phone || 'N/A', 
+                  r.lastLogin ? new Date(r.lastLogin).toLocaleString() : 'Never',
                   r.role, 
                   <span className="status-pill status-active">Active</span>
                 ]}
               />
             }
           />
+          <Route path="users/:id" element={<AdminUserActivity />} />
           
           <Route 
             path="providers" 
@@ -473,13 +1049,23 @@ export default function AdminPanel() {
               <UserTable 
                 title="Service Buddies" 
                 fetchFn={api.getAdminProviders} 
-                cols={['ID', 'Name', 'Email', 'Phone', 'Earnings', 'Status', 'Audit']} 
+                cols={['ID', 'Name', 'Email', 'Phone', 'Earnings', 'Last Login', 'Status', 'Audit']} 
                 mapRow={r => [
                   r._id ? r._id.substring(r._id.length - 6).toUpperCase() : 'N/A', 
-                  `${r.firstName} ${r.lastName}`, 
-                  r.email, 
+                  <Link to={`/admin/users/${r._id}`} style={{ color: 'var(--primary)', fontWeight: 700, textDecoration: 'none', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#43A047', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', overflow: 'hidden', flexShrink: 0 }}>
+                      {r.avatar ? (
+                        <img src={r.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ) : (
+                        r.firstName?.[0] || 'P'
+                      )}
+                    </div>
+                    {r.firstName} {r.lastName}
+                  </Link>,
+                  r.email,
                   r.phone || 'N/A', 
                   `₹${(r.earnings || 0).toLocaleString('en-IN')}`, 
+                  r.lastLogin ? new Date(r.lastLogin).toLocaleString() : 'Never',
                   <span className="status-pill status-active">Active</span>
                 ]}
               />
@@ -510,20 +1096,35 @@ export default function AdminPanel() {
               <UserTable 
                 title="Secured Transactions Ledger" 
                 fetchFn={api.getAdminTransactions} 
-                cols={['TX ID', 'Customer Account', 'Assigned Buddy', 'Volume', 'Schedule Date', 'Method', 'State', 'Audit']} 
+                cols={['TX ID', 'Customer Account', 'Assigned Buddy', 'Accepted State', 'Total Cost', 'Secured Deposit', 'Remaining Balance', 'Schedule Date', 'Method', 'State', 'Audit']} 
                 mapRow={r => [
                   r._id, 
                   r.user, 
-                  r.provider, 
-                  r.amount, 
+                  r.provider || <span style={{ color: '#FF9800', fontStyle: 'italic', fontWeight: 600 }}>Unassigned</span>,
+                  r.status === 'Pending' ? (
+                    <span style={{ color: '#FF9800', fontWeight: 600 }}>⌛ Pending Accept</span>
+                  ) : r.status === 'Declined' ? (
+                    <span style={{ color: '#E53935', fontWeight: 600 }}>❌ Declined</span>
+                  ) : (
+                    <span style={{ color: '#43A047', fontWeight: 600 }}>✓ Accepted</span>
+                  ),
+                  `₹${r.totalCost.toLocaleString('en-IN')}`,
+                  `₹${(r.depositPaid || (r.totalCost * 0.2)).toLocaleString('en-IN')}`,
+                  r.remainingPaid ? (
+                    <span style={{ color: '#43A047', fontWeight: 600 }}>Paid (₹{(r.totalCost * 0.8).toLocaleString('en-IN')})</span>
+                  ) : (
+                    <span style={{ color: '#E53935', fontWeight: 600 }}>Pending (₹{(r.totalCost * 0.8).toLocaleString('en-IN')})</span>
+                  ),
                   r.date, 
                   r.method, 
-                  <span className={`status-pill status-${r.status === 'Paid' ? 'active' : r.status === 'Refunded' ? 'done' : 'pending'}`}>{r.status}</span>
+                  <span className={`status-pill status-${r.status === 'Paid' || r.status === 'Active' || r.status === 'Completed' ? 'active' : r.status === 'Declined' ? 'done' : 'pending'}`}>{r.status}</span>
                 ]}
               />
             }
           />
 
+          <Route path="logs" element={<AdminLogs/>}/>
+          <Route path="enquiries" element={<AdminEnquiries/>}/>
           <Route path="settings" element={<Placeholder title="Settings"/>}/>
         </Routes>
       </main>

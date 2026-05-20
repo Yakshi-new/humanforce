@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import { useParams, Link, useNavigate } from 'react-router-dom'
 import { Star, CheckCircle, ArrowRight, MessageSquare, Calendar, Shield, Clock, Globe, Zap } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
-import { api } from '../utils/api'
+import { api, loadRazorpayScript } from '../utils/api'
 import './ServiceDetail.css'
 
 const getIcon = (name) => {
@@ -42,10 +42,84 @@ export default function ServiceDetail() {
     setBookingError('')
 
     if (!api.isAuthenticated()) {
-      navigate('/login')
+      navigate('/login', { state: { from: `/services/${id}` } })
       return
     }
 
+    const user = api.getUser()
+    const depositAmount = (service.price * bookingForm.hours) * 0.2
+
+    try {
+      setBookingLoading(true)
+
+      // 1. Load Razorpay script dynamically
+      const loaded = await loadRazorpayScript()
+      if (!loaded) {
+        throw new Error('Failed to load payment gateway. Check your internet connection.')
+      }
+
+      // 2. Open Razorpay checkout options
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_q31m9CozvW9C3v', // Test Key
+        amount: Math.round(depositAmount * 100), // in paise
+        currency: 'INR',
+        name: 'HumanForce Buddy Portal',
+        description: `20% Booking Deposit for ${service.name}`,
+        handler: async function (response) {
+          try {
+            setBookingLoading(true)
+            // 3. Create the booking on successful payment
+            await api.createBooking({
+              serviceId: service.serviceId,
+              date: bookingForm.date,
+              time: bookingForm.time,
+              hours: bookingForm.hours,
+              note: bookingForm.note,
+              razorpayPaymentId: response.razorpay_payment_id
+            })
+            setBooked(true)
+          } catch (err) {
+            console.error(err)
+            setBookingError(err.message || 'Failed to complete booking processing.')
+          } finally {
+            setBookingLoading(false)
+          }
+        },
+        prefill: {
+          name: user ? `${user.firstName} ${user.lastName}` : '',
+          email: user ? user.email : '',
+          contact: user ? user.phone : ''
+        },
+        theme: {
+          color: '#E53935' // HumanForce Red theme
+        },
+        modal: {
+          ondismiss: function () {
+            setBookingLoading(false)
+          }
+        }
+      }
+
+      const rzp = new window.Razorpay(options)
+      rzp.open()
+
+    } catch (err) {
+      console.error(err)
+      setBookingError(err.message || 'Failed to initialize payment.')
+      setBookingLoading(false)
+    }
+  }
+
+  const handleSimulatedBook = async () => {
+    setBookingError('')
+    if (!api.isAuthenticated()) {
+      navigate('/login', { state: { from: `/services/${id}` } })
+      return
+    }
+    if (!bookingForm.date || !bookingForm.time) {
+      setBookingError('Please select a valid scheduled date and start time.')
+      return
+    }
     try {
       setBookingLoading(true)
       await api.createBooking({
@@ -53,12 +127,13 @@ export default function ServiceDetail() {
         date: bookingForm.date,
         time: bookingForm.time,
         hours: bookingForm.hours,
-        note: bookingForm.note
+        note: bookingForm.note,
+        razorpayPaymentId: `simpay_${Date.now()}`
       })
       setBooked(true)
     } catch (err) {
       console.error(err)
-      setBookingError(err.message || 'Failed to request buddy booking.')
+      setBookingError(err.message || 'Failed to complete booking processing.')
     } finally {
       setBookingLoading(false)
     }
@@ -248,13 +323,18 @@ export default function ServiceDetail() {
                 </div>
                 
                 {!api.isAuthenticated() ? (
-                  <button type="button" className="btn-primary booking-btn" onClick={() => navigate('/login')}>
+                  <button type="button" className="btn-primary booking-btn" onClick={() => navigate('/login', { state: { from: `/services/${id}` } })}>
                     Sign In to Book
                   </button>
                 ) : (
-                  <button type="submit" disabled={bookingLoading} className="btn-primary booking-btn">
-                    {bookingLoading ? 'Processing Request...' : <><Calendar size={18} /> Book Buddy</>}
-                  </button>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                    <button type="submit" disabled={bookingLoading} className="btn-primary booking-btn">
+                      {bookingLoading ? 'Processing Request...' : <><Calendar size={18} /> Book Buddy</>}
+                    </button>
+                    <button type="button" onClick={handleSimulatedBook} disabled={bookingLoading} className="btn-outline booking-btn-sim" style={{ borderColor: '#43A047', color: '#43A047', background: 'transparent', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                      ⚡ Simulate Payment (Test Mode)
+                    </button>
+                  </div>
                 )}
               </form>
             ) : (

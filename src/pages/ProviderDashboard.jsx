@@ -24,8 +24,12 @@ function ProviderHome({ user, bookings }) {
       <h2 className="dash-page-title">My Profile</h2>
       <div className="provider-profile-card dash-card" style={{marginBottom:'24px'}}>
         <div className="provider-header">
-          <div className="provider-big-avatar" style={{ background: '#E53935', color: 'white' }}>
-            {user.firstName?.[0] || 'P'}
+          <div className="provider-big-avatar" style={{ background: '#E53935', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            {user.avatar ? (
+              <img src={user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              user.firstName?.[0] || 'P'
+            )}
           </div>
           <div className="provider-info">
             <h3>{user.firstName} {user.lastName}</h3>
@@ -133,8 +137,12 @@ function ProviderRequests({ bookings, onStatusUpdate }) {
           pendingRequests.map((r) => (
             <div key={r._id} className="request-card dash-card">
               <div className="request-header">
-                <div className="request-client-avatar" style={{ background: '#E53935', color: 'white' }}>
-                  {r.client?.firstName?.[0] || 'C'}
+                <div className="request-client-avatar" style={{ background: '#E53935', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {r.client?.avatar ? (
+                    <img src={r.client.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    r.client?.firstName?.[0] || 'C'
+                  )}
                 </div>
                 <div className="request-info">
                   <div className="font-bold">{r.client?.firstName} {r.client?.lastName}</div>
@@ -339,8 +347,12 @@ function DashMessages() {
                 className={`convo-item ${activeThread?.user?._id === c.user?._id ? 'convo-active' : ''}`} 
                 onClick={() => setActiveThread(c)}
               >
-                <div className="convo-avatar" style={{ background: '#E53935', color: 'white' }}>
-                  {c.user?.firstName?.[0] || 'C'}
+                <div className="convo-avatar" style={{ background: '#E53935', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {c.user?.avatar ? (
+                    <img src={c.user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    c.user?.firstName?.[0] || 'C'
+                  )}
                 </div>
                 <div className="convo-info">
                   <div className="convo-name-row">
@@ -357,8 +369,12 @@ function DashMessages() {
           {activeThread && (
             <div className="chat-panel">
               <div className="chat-panel-header">
-                <div className="convo-avatar" style={{ background: '#E53935', color: 'white' }}>
-                  {activeThread.user?.firstName?.[0]}
+                <div className="convo-avatar" style={{ background: '#E53935', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {activeThread.user?.avatar ? (
+                    <img src={activeThread.user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    activeThread.user?.firstName?.[0] || 'C'
+                  )}
                 </div>
                 <div>
                   <div className="font-bold">{activeThread.user?.firstName} {activeThread.user?.lastName}</div>
@@ -484,8 +500,12 @@ export default function ProviderDashboard() {
         </div>
         
         <div className="dash-user-card">
-          <div className="dash-user-avatar" style={{ background: '#E53935', color: 'white' }}>
-            {getInitials()}
+          <div className="dash-user-avatar" style={{ background: '#E53935', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            {currentUser.avatar ? (
+              <img src={currentUser.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              getInitials()
+            )}
           </div>
           <div>
             <div className="dash-user-name">{currentUser.firstName} {currentUser.lastName}</div>

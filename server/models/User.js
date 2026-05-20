@@ -16,6 +16,8 @@ const userSchema = new mongoose.Schema({
   rating: { type: Number, default: 4.8 },
   reviewsCount: { type: Number, default: 0 },
   earnings: { type: Number, default: 0 },
+  avatar: { type: String, default: '' },
+  lastLogin: { type: Date },
   createdAt: { type: Date, default: Date.now }
 })
 

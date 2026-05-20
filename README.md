@@ -346,3 +346,23 @@ Built with ❤️ by **Harsdiya**
 //     { "source": "/(.*)", "destination": "/index.html" }
 //   ]
 // }
+
+⚠️ You have been logged out due to 15 minutes of inactivy.                 we dosn't need to show this msg remove the msg.just log out and go to login page . 
+
+i want all user and providers  record on the log history . 
+
+On contact page i have fill the enquiry form but Where i can check it i mean thire is no recod on admin panel  show the enquery on admin panel.
+
+As register any user or provider set a avtar on his profile .
+
+next issue is When the user book a service on webpage then user is not register on our db so first redirect it to login or register page After register or login then its open the book a buddy page.
+
+I think no need to a go to dashboard button button on registration and login page when its successfull login then direct login to dashboard for all Roles like admin or user and provider. 
+
+When i request to book then the payment method is page is not loaded or take a too long time to open or :"Something went wrong error occured" after the error pop up is closed then the payment button was re set to re click.
+
+Devlop the system to trace all the record all the  remaining payment of status is pending or clear means its compeleted. 
+and also the booking is not accepting by the provider.
+
+
+

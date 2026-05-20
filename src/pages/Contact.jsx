@@ -1,13 +1,29 @@
 import { useState } from 'react'
 import { Mail, Phone, MapPin, Clock, Send, CheckCircle } from 'lucide-react'
+import { api } from '../utils/api'
 import './Categories.css'
 import './Contact.css'
 
 export default function Contact() {
   const [form, setForm] = useState({ name:'', email:'', phone:'', subject:'', message:'' })
   const [sent, setSent] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+  
   const set = (k,v) => setForm(f=>({...f,[k]:v}))
-  const handle = e => { e.preventDefault(); setSent(true) }
+  const handle = async e => {
+    e.preventDefault()
+    setError('')
+    setLoading(true)
+    try {
+      await api.createEnquiry(form)
+      setSent(true)
+    } catch (err) {
+      setError(err.message || 'Failed to send enquiry. Please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
 
   return (
     <main className="page-with-navbar">
@@ -56,6 +72,20 @@ export default function Contact() {
             ) : (
               <form onSubmit={handle} className="contact-form">
                 <h3 style={{marginBottom:'24px'}}>Send a Message</h3>
+                {error && (
+                  <div style={{
+                    background: 'rgba(229,57,53,0.1)',
+                    border: '1px solid rgba(229,57,53,0.3)',
+                    color: '#E53935',
+                    padding: '10px 14px',
+                    borderRadius: '6px',
+                    fontSize: '0.85rem',
+                    marginBottom: '16px',
+                    fontWeight: 500
+                  }}>
+                    {error}
+                  </div>
+                )}
                 <div className="form-row">
                   <div className="form-group"><label className="form-label">Full Name</label><input className="form-input" value={form.name} onChange={e=>set('name',e.target.value)} placeholder="Your name" required/></div>
                   <div className="form-group"><label className="form-label">Email</label><input type="email" className="form-input" value={form.email} onChange={e=>set('email',e.target.value)} placeholder="you@company.com" required/></div>
@@ -74,8 +104,8 @@ export default function Contact() {
                   </div>
                 </div>
                 <div className="form-group"><label className="form-label">Message</label><textarea className="form-input" value={form.message} onChange={e=>set('message',e.target.value)} rows={5} placeholder="Tell us how we can help..." style={{resize:'vertical'}} required/></div>
-                <button type="submit" className="btn-primary" style={{justifyContent:'center',width:'100%',padding:'15px'}}>
-                  <Send size={18}/> Send Message
+                <button type="submit" className="btn-primary" disabled={loading} style={{justifyContent:'center',width:'100%',padding:'15px',opacity:loading?0.7:1}}>
+                  <Send size={18}/> {loading ? 'Sending...' : 'Send Message'}
                 </button>
               </form>
             )}

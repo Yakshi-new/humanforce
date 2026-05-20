@@ -1,10 +1,12 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Mail, Lock, Phone, Eye, EyeOff, Zap, ArrowRight } from 'lucide-react'
 import { api } from '../utils/api'
 import './Auth.css'
 
 export default function Login() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [tab, setTab] = useState('email')
   const [showPass, setShowPass] = useState(false)
   const [email, setEmail] = useState('')
@@ -13,17 +15,15 @@ export default function Login() {
   const [otp, setOtp] = useState('')
   const [otpSent, setOtpSent] = useState(false)
   const [forgot, setForgot] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
   const [error, setError] = useState('')
-  const [userRole, setUserRole] = useState('customer')
 
   const handleEmail = async e => {
     e.preventDefault()
     setError('')
     try {
       const data = await api.login({ email, password, method: 'email' })
-      setUserRole(data.role)
-      setSubmitted(true)
+      const redirectPath = location.state?.from || getDashboardPath(data.role)
+      navigate(redirectPath)
     } catch (err) {
       setError(err.message || 'Invalid email or password')
     }
@@ -37,8 +37,8 @@ export default function Login() {
     } else {
       try {
         const data = await api.login({ phone, method: 'otp' })
-        setUserRole(data.role)
-        setSubmitted(true)
+        const redirectPath = location.state?.from || getDashboardPath(data.role)
+        navigate(redirectPath)
       } catch (err) {
         setError(err.message || 'OTP verification failed')
       }
@@ -50,8 +50,8 @@ export default function Login() {
     setError('')
     try {
       const data = await api.login({ email: 'googleuser@humanforce.com', method: 'google' })
-      setUserRole(data.role)
-      setSubmitted(true)
+      const redirectPath = location.state?.from || getDashboardPath(data.role)
+      navigate(redirectPath)
     } catch (err) {
       setError(err.message || 'Google auth failed')
     }
@@ -95,16 +95,7 @@ export default function Login() {
             </div>
           )}
 
-          {submitted ? (
-            <div className="auth-success">
-              <div className="auth-success-icon">✓</div>
-              <h3>Logged in successfully!</h3>
-              <p>Redirecting to your dashboard...</p>
-              <Link to={getDashboardPath(userRole)} className="btn-primary" style={{marginTop:'20px',justifyContent:'center'}}>
-                Go to Dashboard <ArrowRight size={16}/>
-              </Link>
-            </div>
-          ) : forgot ? (
+          {forgot ? (
             <>
               <h2>Reset Password</h2>
               <p className="auth-sub">Enter your email to receive a reset link.</p>
@@ -120,7 +111,7 @@ export default function Login() {
           ) : (
             <>
               <h2>Sign In</h2>
-              <p className="auth-sub">New here? <Link to="/register" className="auth-link">Create an account</Link></p>
+              <p className="auth-sub">New here? <Link to="/register" state={{ from: location.state?.from }} className="auth-link">Create an account</Link></p>
               <div className="auth-tabs">
                 <button className={`auth-tab ${tab==='email'?'active':''}`} onClick={()=>setTab('email')}>Email</button>
                 <button className={`auth-tab ${tab==='otp'?'active':''}`} onClick={()=>setTab('otp')}>Mobile OTP</button>

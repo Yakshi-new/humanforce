@@ -39,6 +39,7 @@ export const api = {
     // Save in storage
     localStorage.setItem('hf_token', data.token)
     localStorage.setItem('hf_user', JSON.stringify(data))
+    localStorage.setItem('hf_last_activity', Date.now().toString())
     return data
   },
 
@@ -52,6 +53,7 @@ export const api = {
     // Save in storage
     localStorage.setItem('hf_token', data.token)
     localStorage.setItem('hf_user', JSON.stringify(data))
+    localStorage.setItem('hf_last_activity', Date.now().toString())
     return data
   },
 
@@ -62,9 +64,22 @@ export const api = {
     return handleResponse(res)
   },
 
-  logout: () => {
+  logout: async (isAuto = false) => {
+    try {
+      const token = localStorage.getItem('hf_token')
+      if (token) {
+        await customFetch('/api/auth/logout', {
+          method: 'POST',
+          headers: getHeaders(),
+          body: JSON.stringify({ isAuto })
+        })
+      }
+    } catch (err) {
+      console.error('Failed to log logout activity:', err)
+    }
     localStorage.removeItem('hf_token')
     localStorage.removeItem('hf_user')
+    localStorage.removeItem('hf_last_activity')
   },
 
   getUser: () => {
@@ -98,11 +113,20 @@ export const api = {
 
   // --- BOOKING ENDPOINTS ---
   createBooking: async (bookingData) => {
-    // bookingData: { serviceId, date, time, hours, note }
+    // bookingData: { serviceId, date, time, hours, note, razorpayPaymentId }
     const res = await customFetch('/api/bookings', {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify(bookingData)
+    })
+    return handleResponse(res)
+  },
+
+  payRemaining: async (bookingId, remainingPaymentId) => {
+    const res = await customFetch(`/api/bookings/${bookingId}/pay-remaining`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ remainingPaymentId })
     })
     return handleResponse(res)
   },
@@ -183,5 +207,58 @@ export const api = {
       body: JSON.stringify({ providerId })
     })
     return handleResponse(res)
+  },
+
+  getAdminUserActivity: async (userId) => {
+    const res = await customFetch(`/api/admin/users/${userId}/activity`, {
+      headers: getHeaders()
+    })
+    return handleResponse(res)
+  },
+
+  getAdminLogs: async () => {
+    const res = await customFetch('/api/admin/logs', {
+      headers: getHeaders()
+    })
+    return handleResponse(res)
+  },
+
+  createEnquiry: async (enquiryData) => {
+    const res = await customFetch('/api/enquiries', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(enquiryData)
+    })
+    return handleResponse(res)
+  },
+
+  getAdminEnquiries: async () => {
+    const res = await customFetch('/api/enquiries', {
+      headers: getHeaders()
+    })
+    return handleResponse(res)
+  },
+
+  updateAdminEnquiryStatus: async (id, status) => {
+    const res = await customFetch(`/api/enquiries/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ status })
+    })
+    return handleResponse(res)
   }
+}
+
+export const loadRazorpayScript = () => {
+  return new Promise((resolve) => {
+    if (window.Razorpay) {
+      resolve(true)
+      return
+    }
+    const script = document.createElement('script')
+    script.src = 'https://checkout.razorpay.com/v1/checkout.js'
+    script.onload = () => resolve(true)
+    script.onerror = () => resolve(false)
+    document.body.appendChild(script)
+  })
 }

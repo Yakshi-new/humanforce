@@ -7,9 +7,9 @@ import './Navbar.css'
 const NAV_LINKS = [
   { label: 'Home', href: '/' },
   { label: 'Services', href: '/services' },
-  { label: 'Categories', href: '/categories' },
-  { label: 'How It Works', href: '/how-it-works' },
-  { label: 'Pricing', href: '/pricing' },
+  // { label: 'Categories', href: '/categories' },
+  // { label: 'How It Works', href: '/how-it-works' },
+  // { label: 'Pricing', href: '/pricing' },
   { label: 'About', href: '/about' },
   { label: 'Blog', href: '/blog' },
   { label: 'Contact', href: '/contact' },
@@ -53,7 +53,7 @@ export default function Navbar() {
     <header className={`navbar ${scrolled ? 'navbar-scrolled' : ''}`}>
       <div className="navbar-inner">
         <Link to="/" className="navbar-logo">
-          <div className="logo-icon"><Zap size={18}/></div>
+          <div className="logo-icon"><Zap size={18} /></div>
           <span>HumanForce</span>
         </Link>
 

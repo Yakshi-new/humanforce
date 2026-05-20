@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { Zap, ArrowRight, User, Briefcase, CheckCircle } from 'lucide-react'
 import { api } from '../utils/api'
 import './Auth.css'
@@ -8,6 +8,8 @@ import './Register.css'
 const STEPS = ['Role', 'Basic Info', 'Profile', 'Verification', 'Complete']
 
 export default function Register() {
+  const location = useLocation()
+  const navigate = useNavigate()
   const [step, setStep] = useState(0)
   const [role, setRole] = useState('')
   const [form, setForm] = useState({ firstName:'', lastName:'', email:'', phone:'', password:'', company:'', bio:'', skills:[], idType:'', linkedin:'' })
@@ -40,8 +42,9 @@ export default function Register() {
         skills: form.skills,
         idType: form.idType
       }
-      await api.register(payload)
-      next()
+      const data = await api.register(payload)
+      const redirectPath = location.state?.from || (role === 'provider' ? '/provider' : '/dashboard')
+      navigate(redirectPath)
     } catch (err) {
       setError(err.message || 'Registration failed')
     }
@@ -65,7 +68,7 @@ export default function Register() {
       <div className="auth-right">
         <div className="auth-box">
           <h2>Create Account</h2>
-          <p className="auth-sub">Already have one? <Link to="/login" className="auth-link">Sign in</Link></p>
+          <p className="auth-sub">Already have one? <Link to="/login" state={{ from: location.state?.from }} className="auth-link">Sign in</Link></p>
 
           {error && (
             <div className="auth-error-banner" style={{

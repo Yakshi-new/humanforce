@@ -1,11 +1,12 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, ShoppingBag, MessageSquare, Bell, CreditCard, Settings, LogOut, Zap, Clock, Star, ArrowRight, Menu, X, Send } from 'lucide-react'
-import { api } from '../utils/api'
+import { LayoutDashboard, ShoppingBag, MessageSquare, Bell, CreditCard, Settings, LogOut, Zap, Clock, Star, ArrowRight, Menu, X, Send, Calendar, Shield, CheckCircle, Search } from 'lucide-react'
+import { api, loadRazorpayScript } from '../utils/api'
 import './Dashboard.css'
 
 const NAV = [
   { icon: <LayoutDashboard size={18}/>, label: 'Dashboard', path: '/dashboard' },
+  { icon: <Calendar size={18}/>, label: 'Book a Buddy', path: '/dashboard/book' },
   { icon: <ShoppingBag size={18}/>, label: 'My Orders', path: '/dashboard/orders' },
   { icon: <MessageSquare size={18}/>, label: 'Messages', path: '/dashboard/messages' },
   { icon: <Bell size={18}/>, label: 'Notifications', path: '/dashboard/notifications' },
@@ -74,6 +75,7 @@ function DashHome({ bookings }) {
                       <td className="font-bold">
                         <div>₹{o.totalCost?.toLocaleString('en-IN')}</div>
                         <div style={{ fontSize: '0.74rem', color: '#43A047', fontWeight: 500 }}>Paid 20%: ₹{(o.depositPaid || (o.totalCost * 0.2))?.toLocaleString('en-IN')}</div>
+                        <div style={{ fontSize: '0.7rem', color: o.remainingPaid ? '#43A047' : '#E53935', fontWeight: 500 }}>{o.remainingPaid ? '✓ Fully Paid' : `Pending 80%: ₹${(o.totalCost * 0.8)?.toLocaleString('en-IN')}`}</div>
                       </td>
                     </tr>
                   ))}
@@ -130,7 +132,74 @@ function DashHome({ bookings }) {
   )
 }
 
-function DashOrders({ bookings, onStatusUpdate }) {
+function DashOrders({ bookings, onStatusUpdate, onPaymentSuccess }) {
+  const [payingId, setPayingId] = useState(null)
+
+  const handlePayRemaining = async (booking) => {
+    const user = api.getUser()
+    const remainingAmount = booking.totalCost * 0.8
+    setPayingId(booking._id)
+
+    try {
+      const loaded = await loadRazorpayScript()
+      if (!loaded) {
+        throw new Error('Failed to load payment gateway. Check your internet connection.')
+      }
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_q31m9CozvW9C3v',
+        amount: Math.round(remainingAmount * 100), // in paise
+        currency: 'INR',
+        name: 'HumanForce Buddy Portal',
+        description: `Pay 80% Remaining Balance for Booking ${booking.bookingId}`,
+        handler: async function (response) {
+          try {
+            await api.payRemaining(booking._id, response.razorpay_payment_id)
+            if (onPaymentSuccess) onPaymentSuccess()
+          } catch (err) {
+            console.error(err)
+            alert('Failed to complete payment processing: ' + err.message)
+          } finally {
+            setPayingId(null)
+          }
+        },
+        prefill: {
+          name: user ? `${user.firstName} ${user.lastName}` : '',
+          email: user ? user.email : '',
+          contact: user ? user.phone : ''
+        },
+        theme: {
+          color: '#E53935'
+        },
+        modal: {
+          ondismiss: function () {
+            setPayingId(null)
+          }
+        }
+      }
+
+      const rzp = new window.Razorpay(options)
+      rzp.open()
+    } catch (err) {
+      console.error(err)
+      alert(err.message || 'Failed to initialize payment.')
+      setPayingId(null)
+    }
+  }
+
+  const handleSimulatedPayRemaining = async (booking) => {
+    setPayingId(booking._id)
+    try {
+      await api.payRemaining(booking._id, `simpay_rem_${Date.now()}`)
+      if (onPaymentSuccess) onPaymentSuccess()
+    } catch (err) {
+      console.error(err)
+      alert('Failed to process payment: ' + err.message)
+    } finally {
+      setPayingId(null)
+    }
+  }
+
   return (
     <div className="dash-content">
       <h2 className="dash-page-title">My Bookings</h2>
@@ -167,56 +236,654 @@ function DashOrders({ bookings, onStatusUpdate }) {
                     </td>
                     <td>{o.hours} hrs</td>
                     <td>
-                      <span className={`status-pill status-${(o.status || 'Pending').toLowerCase()}`}>
-                        {o.status}
-                      </span>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                        <span className={`status-pill status-${(o.status || 'Pending').toLowerCase()}`}>
+                          {o.status}
+                        </span>
+                        <span className={`status-pill ${o.remainingPaid ? 'status-active' : 'status-pending'}`} style={{ fontSize: '0.66rem' }}>
+                          {o.remainingPaid ? 'Fully Paid' : 'Deposit Secured'}
+                        </span>
+                      </div>
                     </td>
                     <td className="font-bold">
                       <div className="text-primary">₹{o.totalCost?.toLocaleString('en-IN')}</div>
-                      <div style={{ fontSize: '0.74rem', color: '#43A047', fontWeight: 600 }}>Deposit: ₹{(o.depositPaid || (o.totalCost * 0.2))?.toLocaleString('en-IN')}</div>
+                      <div style={{ fontSize: '0.74rem', color: '#43A047', fontWeight: 600 }}>Paid 20%: ₹{(o.depositPaid || (o.totalCost * 0.2))?.toLocaleString('en-IN')}</div>
+                      <div style={{ fontSize: '0.74rem', color: o.remainingPaid ? '#43A047' : '#E53935', fontWeight: 500 }}>
+                        {o.remainingPaid ? 'Balance Paid' : `80% Bal: ₹${(o.totalCost * 0.8)?.toLocaleString('en-IN')}`}
+                      </div>
                     </td>
                     <td>
-                      {o.status === 'Pending' && (
-                        <button
-                          onClick={() => onStatusUpdate(o._id, 'Declined')}
-                          style={{
-                            background: 'rgba(229,57,53,0.1)',
-                            border: '1px solid rgba(229,57,53,0.2)',
-                            color: '#E53935',
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '0.78rem'
-                          }}
-                        >
-                          Cancel
-                        </button>
-                      )}
-                      {o.status === 'Active' && (
-                        <button
-                          onClick={() => onStatusUpdate(o._id, 'Completed')}
-                          style={{
-                            background: 'rgba(67,160,71,0.1)',
-                            border: '1px solid rgba(67,160,71,0.2)',
-                            color: '#43A047',
-                            padding: '4px 10px',
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            fontSize: '0.78rem'
-                          }}
-                        >
-                          Complete
-                        </button>
-                      )}
-                      {['Completed', 'Declined'].includes(o.status) && (
-                        <span style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>Archive</span>
-                      )}
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                        {o.status === 'Pending' && (
+                          <button
+                            onClick={() => onStatusUpdate(o._id, 'Declined')}
+                            style={{
+                              background: 'rgba(229,57,53,0.1)',
+                              border: '1px solid rgba(229,57,53,0.2)',
+                              color: '#E53935',
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.78rem'
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        )}
+                        {o.status === 'Active' && (
+                          <button
+                            onClick={() => onStatusUpdate(o._id, 'Completed')}
+                            style={{
+                              background: 'rgba(67,160,71,0.1)',
+                              border: '1px solid rgba(67,160,71,0.2)',
+                              color: '#43A047',
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.78rem'
+                            }}
+                          >
+                            Complete
+                          </button>
+                        )}
+                        {!o.remainingPaid && (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <button
+                              onClick={() => handlePayRemaining(o)}
+                              disabled={payingId === o._id}
+                              style={{
+                                background: '#43A047',
+                                border: 'none',
+                                color: 'white',
+                                padding: '4px 10px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '0.78rem',
+                                fontWeight: 600
+                              }}
+                            >
+                              {payingId === o._id ? 'Paying...' : 'Pay 80%'}
+                            </button>
+                            <button
+                              onClick={() => handleSimulatedPayRemaining(o)}
+                              disabled={payingId === o._id}
+                              style={{
+                                background: 'transparent',
+                                border: '1px solid #43A047',
+                                color: '#43A047',
+                                padding: '3px 8px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '0.74rem',
+                                fontWeight: 600
+                              }}
+                            >
+                              ⚡ Simulate
+                            </button>
+                          </div>
+                        )}
+                        {['Completed', 'Declined'].includes(o.status) && o.remainingPaid && (
+                          <span style={{ fontSize: '0.8rem', color: 'var(--gray-500)' }}>Archive</span>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DashBook({ onBookingCreated }) {
+  const [services, setServices] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [selectedService, setSelectedService] = useState(null)
+  const [bookingForm, setBookingForm] = useState({ date: '', time: '12:00', hours: 2, note: '' })
+  const [bookingLoading, setBookingLoading] = useState(false)
+  const [bookingError, setBookingError] = useState('')
+  const [booked, setBooked] = useState(false)
+
+  const loadServices = async () => {
+    try {
+      setLoading(true)
+      const data = await api.getServices()
+      setServices(data)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadServices()
+  }, [])
+
+  const handleBook = async (e) => {
+    e.preventDefault()
+    setBookingError('')
+    if (!selectedService) return
+
+    const user = api.getUser()
+    const depositAmount = (selectedService.price * bookingForm.hours) * 0.2
+
+    try {
+      setBookingLoading(true)
+      const loaded = await loadRazorpayScript()
+      if (!loaded) {
+        throw new Error('Failed to load payment gateway. Check your internet connection.')
+      }
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_q31m9CozvW9C3v',
+        amount: Math.round(depositAmount * 100), // in paise
+        currency: 'INR',
+        name: 'HumanForce Buddy Portal',
+        description: `20% Booking Deposit for ${selectedService.name}`,
+        handler: async function (response) {
+          try {
+            setBookingLoading(true)
+            await api.createBooking({
+              serviceId: selectedService.serviceId,
+              date: bookingForm.date,
+              time: bookingForm.time,
+              hours: bookingForm.hours,
+              note: bookingForm.note,
+              razorpayPaymentId: response.razorpay_payment_id
+            })
+            setBooked(true)
+            if (onBookingCreated) onBookingCreated()
+          } catch (err) {
+            console.error(err)
+            setBookingError(err.message || 'Failed to complete booking processing.')
+          } finally {
+            setBookingLoading(false)
+          }
+        },
+        prefill: {
+          name: user ? `${user.firstName} ${user.lastName}` : '',
+          email: user ? user.email : '',
+          contact: user ? user.phone : ''
+        },
+        theme: {
+          color: '#E53935'
+        },
+        modal: {
+          ondismiss: function () {
+            setBookingLoading(false)
+          }
+        }
+      }
+
+      const rzp = new window.Razorpay(options)
+      rzp.open()
+
+    } catch (err) {
+      console.error(err)
+      setBookingError(err.message || 'Failed to initialize payment.')
+      setBookingLoading(false)
+    }
+  }
+
+  const handleSimulatedBook = async () => {
+    setBookingError('')
+    if (!selectedService) return
+    if (!bookingForm.date || !bookingForm.time) {
+      setBookingError('Please select a valid scheduled date and start time.')
+      return
+    }
+    try {
+      setBookingLoading(true)
+      await api.createBooking({
+        serviceId: selectedService.serviceId,
+        date: bookingForm.date,
+        time: bookingForm.time,
+        hours: bookingForm.hours,
+        note: bookingForm.note,
+        razorpayPaymentId: `simpay_${Date.now()}`
+      })
+      setBooked(true)
+      if (onBookingCreated) onBookingCreated()
+    } catch (err) {
+      console.error(err)
+      setBookingError(err.message || 'Failed to complete booking processing.')
+    } finally {
+      setBookingLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
+        <p style={{ color: '#E53935' }}>Retrieving live professional buddylist...</p>
+      </div>
+    )
+  }
+
+  if (booked) {
+    return (
+      <div className="dash-content">
+        <h2 className="dash-page-title">Book a Buddy</h2>
+        <div className="dash-card" style={{ textAlign: 'center', padding: '40px', maxWidth: '600px', margin: '0 auto' }}>
+          <div style={{ fontSize: '3rem', color: '#43A047', marginBottom: '20px' }}>✓</div>
+          <h3>Booking Deposit Processed!</h3>
+          <p style={{ color: 'var(--gray-400)', marginTop: '12px', lineHeight: '1.6' }}>
+            Your 20% deposit payment has been successfully secured. We have initiated the buddy coordinate algorithms.
+          </p>
+          <div style={{ marginTop: '24px', display: 'flex', gap: '12px', justifyContent: 'center' }}>
+            <Link to="/dashboard/orders" className="btn-primary" style={{ textDecoration: 'none' }}>
+              View Bookings
+            </Link>
+            <button onClick={() => { setBooked(false); setSelectedService(null); }} className="btn-outline">
+              Book Another Buddy
+            </button>
+          </div>
+        </div>
+      </div>
+    )
+  }
+
+  return (
+    <div className="dash-content">
+      <h2 className="dash-page-title">Book a Buddy</h2>
+      
+      {!selectedService ? (
+        <div className="dash-services-grid" style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))',
+          gap: '20px',
+          marginTop: '20px'
+        }}>
+          {services.map(s => (
+            <div key={s._id} className="dash-card" style={{
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'space-between',
+              height: '100%',
+              position: 'relative'
+            }}>
+              <div>
+                <div style={{
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  marginBottom: '14px'
+                }}>
+                  <span style={{
+                    fontSize: '0.75rem',
+                    background: 'rgba(229,57,53,0.1)',
+                    color: '#E53935',
+                    padding: '4px 10px',
+                    borderRadius: '50px',
+                    fontWeight: 600
+                  }}>{s.category}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '4px', fontSize: '0.85rem' }}>
+                    <Star size={14} fill="#FFC107" color="#FFC107" />
+                    <strong>{s.rating || '4.8'}</strong>
+                  </div>
+                </div>
+                <h3 style={{ fontSize: '1.15rem', color: 'white', marginBottom: '8px' }}>{s.name}</h3>
+                <p style={{ fontSize: '0.85rem', color: 'var(--gray-400)', lineHeight: '1.5', marginBottom: '16px' }}>{s.desc?.substring(0, 100)}...</p>
+              </div>
+              <div style={{
+                borderTop: '1px solid rgba(255,255,255,0.06)',
+                paddingTop: '14px',
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center'
+              }}>
+                <div>
+                  <span style={{ fontSize: '0.78rem', color: 'var(--gray-500)' }}>Hourly rate</span>
+                  <div style={{ fontSize: '1.15rem', fontWeight: 700, color: 'white' }}>₹{s.price}<span style={{ fontSize: '0.78rem', fontWeight: 400, color: 'var(--gray-400)' }}>/hr</span></div>
+                </div>
+                <button onClick={() => setSelectedService(s)} className="btn-primary" style={{ padding: '8px 16px', fontSize: '0.85rem' }}>
+                  Book Buddy
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '30px', marginTop: '20px' }}>
+          <div className="dash-card">
+            <button onClick={() => setSelectedService(null)} className="btn-outline" style={{
+              padding: '6px 12px',
+              fontSize: '0.8rem',
+              marginBottom: '20px',
+              display: 'inline-flex',
+              alignItems: 'center',
+              gap: '6px'
+            }}>
+              ← Back to Buddies
+            </button>
+            <div style={{ display: 'flex', gap: '16px', alignItems: 'center', marginBottom: '24px' }}>
+              <div style={{
+                width: '50px',
+                height: '50px',
+                borderRadius: '10px',
+                background: selectedService.bg || '#E53935',
+                color: 'white',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                fontSize: '1.5rem'
+              }}>★</div>
+              <div>
+                <span style={{ fontSize: '0.78rem', background: 'rgba(229,57,53,0.1)', color: '#E53935', padding: '2px 8px', borderRadius: '4px', fontWeight: 600 }}>{selectedService.category}</span>
+                <h3 style={{ color: 'white', marginTop: '4px' }}>{selectedService.name}</h3>
+              </div>
+            </div>
+            <p style={{ fontSize: '0.9rem', color: 'var(--gray-300)', lineHeight: '1.6', marginBottom: '20px' }}>{selectedService.desc}</p>
+            
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '20px' }}>
+              <h4 style={{ color: 'white', marginBottom: '12px' }}>Platform Trust Features</h4>
+              <ul style={{ listStyle: 'none', padding: 0, margin: 0, display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                <li style={{ fontSize: '0.85rem', color: 'var(--gray-400)', display: 'flex', alignItems: 'center', gap: '8px' }}>✓ 100% verified, skill-inspected professional buddy.</li>
+                <li style={{ fontSize: '0.85rem', color: 'var(--gray-400)', display: 'flex', alignItems: 'center', gap: '8px' }}>✓ Zero-friction event scheduling coordinates.</li>
+                <li style={{ fontSize: '0.85rem', color: 'var(--gray-400)', display: 'flex', alignItems: 'center', gap: '8px' }}>✓ 20% Deposit secured in premium escrow.</li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="dash-card">
+            <h3 style={{ color: 'white', marginBottom: '20px' }}>Booking Configurations</h3>
+            {bookingError && (
+              <div style={{ background: 'rgba(229,57,53,0.1)', border: '1px solid rgba(229,57,53,0.3)', color: '#E53935', padding: '10px 14px', borderRadius: '6px', fontSize: '0.85rem', marginBottom: '16px' }}>
+                {bookingError}
+              </div>
+            )}
+            <form onSubmit={handleBook} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+              <div className="form-group">
+                <label className="form-label">Scheduled Date</label>
+                <input 
+                  type="date" 
+                  value={bookingForm.date} 
+                  min={new Date().toISOString().split('T')[0]}
+                  onChange={e => setBookingForm({ ...bookingForm, date: e.target.value })} 
+                  className="form-input" 
+                  required 
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Scheduled Start Time</label>
+                <input 
+                  type="time" 
+                  value={bookingForm.time} 
+                  onChange={e => setBookingForm({ ...bookingForm, time: e.target.value })} 
+                  className="form-input" 
+                  required 
+                />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Duration: <strong>{bookingForm.hours} hrs</strong></label>
+                <input 
+                  type="range" 
+                  min="1" 
+                  max="8" 
+                  value={bookingForm.hours} 
+                  onChange={e => setBookingForm({ ...bookingForm, hours: +e.target.value })} 
+                  className="price-slider" 
+                  style={{ width: '100%' }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.74rem', color: 'var(--gray-500)', marginTop: '4px' }}><span>1 hr</span><span>8 hrs</span></div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Special Requests (optional)</label>
+                <textarea 
+                  value={bookingForm.note} 
+                  onChange={e => setBookingForm({ ...bookingForm, note: e.target.value })} 
+                  className="form-input" 
+                  rows="3" 
+                  placeholder="Tell them about your coordinates..." 
+                  style={{ resize: 'vertical' }} 
+                />
+              </div>
+              
+              <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: '16px', marginTop: '10px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--gray-400)', marginBottom: '8px' }}>
+                  <span>Total Bill (₹{selectedService.price} × {bookingForm.hours} hrs):</span>
+                  <strong>₹{(selectedService.price * bookingForm.hours).toLocaleString('en-IN')}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: '#43A047', fontWeight: 600, marginBottom: '8px' }}>
+                  <span>Payable Now (20% Deposit):</span>
+                  <strong>₹{((selectedService.price * bookingForm.hours) * 0.2).toLocaleString('en-IN')}</strong>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', color: 'var(--gray-400)', marginBottom: '16px' }}>
+                  <span>Outstanding Balance (80% Paid Later):</span>
+                  <strong>₹{((selectedService.price * bookingForm.hours) * 0.8).toLocaleString('en-IN')}</strong>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                <button type="submit" disabled={bookingLoading} className="btn-primary" style={{ padding: '12px', fontSize: '0.95rem', fontWeight: 600, width: '100%' }}>
+                  {bookingLoading ? 'Processing Request...' : `Proceed to Pay 20% (₹${((selectedService.price * bookingForm.hours) * 0.2).toLocaleString('en-IN')})`}
+                </button>
+                <button type="button" onClick={handleSimulatedBook} disabled={bookingLoading} className="btn-outline" style={{ borderColor: '#43A047', color: '#43A047', background: 'transparent', padding: '12px', borderRadius: '8px', cursor: 'pointer', fontSize: '0.9rem', fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', width: '100%' }}>
+                  ⚡ Simulate Payment (Test Mode)
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function DashPayments({ bookings, onPaymentSuccess }) {
+  const totalInvested = bookings
+    .filter(b => ['Active', 'Completed'].includes(b.status))
+    .reduce((sum, b) => sum + (b.totalCost || 0), 0)
+
+  const totalDepositsPaid = bookings
+    .reduce((sum, b) => sum + (b.depositPaid || (b.totalCost * 0.2)), 0)
+
+  const outstandingDues = bookings
+    .filter(b => !b.remainingPaid && ['Pending', 'Active'].includes(b.status))
+    .reduce((sum, b) => sum + ((b.totalCost || 0) * 0.8), 0)
+
+  const [payingId, setPayingId] = useState(null)
+
+  const handlePayRemaining = async (booking) => {
+    const user = api.getUser()
+    const remainingAmount = booking.totalCost * 0.8
+    setPayingId(booking._id)
+
+    try {
+      const loaded = await loadRazorpayScript()
+      if (!loaded) throw new Error('Razorpay failed to load')
+
+      const options = {
+        key: import.meta.env.VITE_RAZORPAY_KEY_ID || 'rzp_test_q31m9CozvW9C3v',
+        amount: Math.round(remainingAmount * 100),
+        currency: 'INR',
+        name: 'HumanForce Buddy Portal',
+        description: `Pay 80% Remaining Balance for Booking ${booking.bookingId}`,
+        handler: async function (response) {
+          try {
+            await api.payRemaining(booking._id, response.razorpay_payment_id)
+            if (onPaymentSuccess) onPaymentSuccess()
+          } catch (err) {
+            console.error(err)
+            alert('Failed to process payment: ' + err.message)
+          } finally {
+            setPayingId(null)
+          }
+        },
+        prefill: {
+          name: user ? `${user.firstName} ${user.lastName}` : '',
+          email: user ? user.email : '',
+          contact: user ? user.phone : ''
+        },
+        theme: {
+          color: '#E53935'
+        },
+        modal: {
+          ondismiss: function () {
+            setPayingId(null)
+          }
+        }
+      }
+
+      const rzp = new window.Razorpay(options)
+      rzp.open()
+    } catch (err) {
+      console.error(err)
+      alert(err.message)
+      setPayingId(null)
+    }
+  }
+
+  const handleSimulatedPayRemaining = async (booking) => {
+    setPayingId(booking._id)
+    try {
+      await api.payRemaining(booking._id, `simpay_rem_${Date.now()}`)
+      if (onPaymentSuccess) onPaymentSuccess()
+    } catch (err) {
+      console.error(err)
+      alert('Failed to process payment: ' + err.message)
+    } finally {
+      setPayingId(null)
+    }
+  }
+
+  return (
+    <div className="dash-content">
+      <h2 className="dash-page-title">Billing & Payments</h2>
+
+      <div className="dash-widgets" style={{ marginBottom: '30px' }}>
+        {[
+          { icon: <CreditCard size={22}/>, label:'Total Budget Invested', value: `₹${totalInvested.toLocaleString('en-IN')}`, trend:'Total value of services contracted', color:'#1E88E5' },
+          { icon: <CheckCircle size={22}/>, label:'Secured Deposits (20%)', value: `₹${totalDepositsPaid.toLocaleString('en-IN')}`, trend:'Escrow secured down-payments', color:'#43A047' },
+          { icon: <Clock size={22}/>, label:'Outstanding Balance (80%)', value: `₹${outstandingDues.toLocaleString('en-IN')}`, trend:'Outstanding balance due', color:'#E53935' },
+        ].map((w,i) => (
+          <div key={i} className="widget-card">
+            <div className="widget-icon" style={{background:`${w.color}15`,color:w.color}}>{w.icon}</div>
+            <div className="widget-info">
+              <div className="widget-value">{w.value}</div>
+              <div className="widget-label">{w.label}</div>
+              <div className="widget-trend">{w.trend}</div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1.8fr', gap: '30px' }}>
+        {/* Visa Card Mockup */}
+        <div className="dash-card" style={{
+          background: 'linear-gradient(135deg, #1f1c2c 0%, #928dab 100%)',
+          color: 'white',
+          borderRadius: '16px',
+          padding: '24px',
+          display: 'flex',
+          flexDirection: 'column',
+          justifyContent: 'space-between',
+          height: '220px',
+          boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
+          position: 'relative',
+          overflow: 'hidden'
+        }}>
+          <div style={{ position: 'absolute', top: '-40px', right: '-40px', width: '150px', height: '150px', borderRadius: '50%', background: 'rgba(229,57,53,0.15)', filter: 'blur(30px)' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div style={{ fontSize: '1.2rem', fontWeight: 800, letterSpacing: '1px' }}>HumanForce ESCROW</div>
+            <div style={{ fontSize: '0.85rem', color: 'rgba(255,255,255,0.7)', fontWeight: 600 }}>SECURED PORTAL</div>
+          </div>
+          <div style={{ fontSize: '1.5rem', fontWeight: 500, letterSpacing: '3px', margin: '24px 0' }}>•••• •••• •••• {(api.getUser()?.phone || '1234').slice(-4)}</div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div>
+              <div style={{ fontSize: '0.65rem', color: 'rgba(255,255,255,0.5)', textTransform: 'uppercase' }}>Escrow Client</div>
+              <div style={{ fontSize: '0.9rem', fontWeight: 600 }}>{api.getUser() ? `${api.getUser().firstName} ${api.getUser().lastName}` : 'Guest Client'}</div>
+            </div>
+            <div style={{ fontSize: '1.2rem', fontWeight: 900, color: 'rgba(255,255,255,0.8)' }}>VISA</div>
+          </div>
+        </div>
+
+        {/* Transactions ledger */}
+        <div className="dash-card">
+          <div className="dash-card-header" style={{ marginBottom: '20px' }}>
+            <h3>Escrow Billing Ledger</h3>
+          </div>
+          <div className="orders-table-wrap">
+            {bookings.length === 0 ? (
+              <p style={{ padding: '30px', textAlign: 'center', color: 'var(--gray-500)' }}>No billing items registered yet.</p>
+            ) : (
+              <table className="data-table">
+                <thead>
+                  <tr>
+                    <th>Booking</th>
+                    <th>Total Cost</th>
+                    <th>Breakdown</th>
+                    <th>Status</th>
+                    <th>Action</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {bookings.map(b => (
+                    <tr key={b._id}>
+                      <td className="mono" style={{ fontSize: '0.85rem' }}>
+                        <div>{b.bookingId}</div>
+                        <div style={{ fontSize: '0.72rem', color: 'var(--gray-500)' }}>{b.service?.name}</div>
+                      </td>
+                      <td className="font-bold">₹{b.totalCost?.toLocaleString('en-IN')}</td>
+                      <td>
+                        <div style={{ fontSize: '0.78rem', color: '#43A047' }}>20%: ₹{(b.depositPaid || (b.totalCost * 0.2))?.toLocaleString('en-IN')}</div>
+                        <div style={{ fontSize: '0.78rem', color: b.remainingPaid ? '#43A047' : '#E53935' }}>80%: ₹{(b.totalCost * 0.8)?.toLocaleString('en-IN')}</div>
+                      </td>
+                      <td>
+                        <span className={`status-pill ${b.remainingPaid ? 'status-active' : 'status-pending'}`} style={{ fontSize: '0.7rem' }}>
+                          {b.remainingPaid ? 'Fully Paid' : 'Deposit Secured'}
+                        </span>
+                      </td>
+                      <td>
+                        {!b.remainingPaid ? (
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+                            <button
+                              onClick={() => handlePayRemaining(b)}
+                              disabled={payingId === b._id}
+                              style={{
+                                background: '#43A047',
+                                border: 'none',
+                                color: 'white',
+                                padding: '4px 10px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '0.74rem',
+                                fontWeight: 600
+                              }}
+                            >
+                              {payingId === b._id ? 'Paying...' : 'Pay 80%'}
+                            </button>
+                            <button
+                              onClick={() => handleSimulatedPayRemaining(b)}
+                              disabled={payingId === b._id}
+                              style={{
+                                background: 'transparent',
+                                border: '1px solid #43A047',
+                                color: '#43A047',
+                                padding: '3px 8px',
+                                borderRadius: '4px',
+                                cursor: 'pointer',
+                                fontSize: '0.7rem',
+                                fontWeight: 600
+                              }}
+                            >
+                              ⚡ Simulate
+                            </button>
+                          </div>
+                        ) : (
+                          <span style={{ fontSize: '0.76rem', color: 'var(--gray-500)' }}>Complete</span>
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </div>
       </div>
     </div>
@@ -318,8 +985,12 @@ function DashMessages() {
                 className={`convo-item ${activeThread?.user?._id === c.user?._id ? 'convo-active' : ''}`} 
                 onClick={() => setActiveThread(c)}
               >
-                <div className="convo-avatar" style={{ background: '#E53935', color: 'white' }}>
-                  {c.user?.firstName?.[0] || 'B'}
+                <div className="convo-avatar" style={{ background: '#E53935', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {c.user?.avatar ? (
+                    <img src={c.user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    c.user?.firstName?.[0] || 'B'
+                  )}
                 </div>
                 <div className="convo-info">
                   <div className="convo-name-row">
@@ -336,8 +1007,12 @@ function DashMessages() {
           {activeThread && (
             <div className="chat-panel">
               <div className="chat-panel-header">
-                <div className="convo-avatar" style={{ background: '#E53935', color: 'white' }}>
-                  {activeThread.user?.firstName?.[0]}
+                <div className="convo-avatar" style={{ background: '#E53935', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+                  {activeThread.user?.avatar ? (
+                    <img src={activeThread.user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  ) : (
+                    activeThread.user?.firstName?.[0] || 'B'
+                  )}
                 </div>
                 <div>
                   <div className="font-bold">{activeThread.user?.firstName} {activeThread.user?.lastName}</div>
@@ -453,8 +1128,12 @@ export default function UserDashboard() {
         </div>
         
         <div className="dash-user-card">
-          <div className="dash-user-avatar" style={{ background: '#E53935', color: 'white' }}>
-            {getInitials()}
+          <div className="dash-user-avatar" style={{ background: '#E53935', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
+            {user?.avatar ? (
+              <img src={user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ) : (
+              getInitials()
+            )}
           </div>
           <div>
             <div className="dash-user-name">{user ? `${user.firstName} ${user.lastName}` : 'Guest User'}</div>
@@ -478,10 +1157,11 @@ export default function UserDashboard() {
       <main className="dash-main">
         <Routes>
           <Route index element={<DashHome bookings={bookings} />} />
-          <Route path="orders" element={<DashOrders bookings={bookings} onStatusUpdate={handleStatusUpdate} />} />
+          <Route path="book" element={<DashBook onBookingCreated={loadBookings} />} />
+          <Route path="orders" element={<DashOrders bookings={bookings} onStatusUpdate={handleStatusUpdate} onPaymentSuccess={loadBookings} />} />
           <Route path="messages" element={<DashMessages />} />
           <Route path="notifications" element={<DashPlaceholder title="Notifications"/>} />
-          <Route path="payments" element={<DashPlaceholder title="Payments"/>} />
+          <Route path="payments" element={<DashPayments bookings={bookings} onPaymentSuccess={loadBookings} />} />
           <Route path="settings" element={<DashPlaceholder title="Settings"/>} />
         </Routes>
       </main>

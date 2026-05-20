@@ -2,6 +2,7 @@ import express from 'express'
 import jwt from 'jsonwebtoken'
 import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
+import ActivityLog from '../models/ActivityLog.js'
 import { protect } from '../middleware/auth.js'
 
 const router = express.Router()
@@ -10,6 +11,24 @@ const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'humanforce_secure_jwt_token_secret_key_9988776655', {
     expiresIn: '30d',
   })
+}
+
+const logUserActivity = async (user, action = 'Login') => {
+  try {
+    if (action === 'Login') {
+      user.lastLogin = new Date()
+      await user.save()
+    }
+    await ActivityLog.create({
+      userId: user._id,
+      email: user.email,
+      name: `${user.firstName} ${user.lastName}`,
+      role: user.role,
+      action
+    })
+  } catch (error) {
+    console.error(`Error logging user activity (${action}):`, error)
+  }
 }
 
 // @desc    Register a new user
@@ -29,6 +48,9 @@ router.post('/register', async (req, res) => {
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(password, salt)
 
+    const seed = encodeURIComponent(`${firstName}_${lastName}_${Date.now()}`)
+    const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`
+
     const user = await User.create({
       firstName,
       lastName,
@@ -41,10 +63,13 @@ router.post('/register', async (req, res) => {
       skills: skills || [],
       idType: idType || '',
       linkedin: linkedin || '',
+      avatar: avatarUrl,
       status: role === 'provider' ? 'Pending' : 'Active' // Providers require verification
     })
 
     if (user) {
+      await logUserActivity(user, 'Register')
+      await logUserActivity(user, 'Login')
       res.status(201).json({
         _id: user._id,
         firstName: user.firstName,
@@ -60,6 +85,7 @@ router.post('/register', async (req, res) => {
         status: user.status,
         rating: user.rating,
         reviewsCount: user.reviewsCount,
+        avatar: user.avatar,
         token: generateToken(user._id)
       })
     } else {
@@ -87,6 +113,7 @@ router.post('/login', async (req, res) => {
         return res.status(400).json({ message: 'No user registered with this phone number' })
       }
       // Simulate OTP verification directly
+      await logUserActivity(user, 'Login')
       return res.json({
         _id: user._id,
         firstName: user.firstName,
@@ -100,6 +127,7 @@ router.post('/login', async (req, res) => {
         status: user.status,
         rating: user.rating,
         reviewsCount: user.reviewsCount,
+        avatar: user.avatar,
         token: generateToken(user._id)
       })
     } else if (method === 'google') {
@@ -108,15 +136,20 @@ router.post('/login', async (req, res) => {
       if (!user) {
         const salt = await bcrypt.genSalt(10)
         const hashedPassword = await bcrypt.hash('google_oauth_dummy_pass', salt)
+        const googleSeed = encodeURIComponent(email)
+        const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${googleSeed}`
         user = await User.create({
           firstName: email.split('@')[0],
           lastName: 'Google User',
           email,
           phone: '+919999999999',
           password: hashedPassword,
-          role: 'customer'
+          role: 'customer',
+          avatar: avatarUrl
         })
+        await logUserActivity(user, 'Register')
       }
+      await logUserActivity(user, 'Login')
       return res.json({
         _id: user._id,
         firstName: user.firstName,
@@ -130,6 +163,7 @@ router.post('/login', async (req, res) => {
         status: user.status,
         rating: user.rating,
         reviewsCount: user.reviewsCount,
+        avatar: user.avatar,
         token: generateToken(user._id)
       })
     } else {
@@ -137,6 +171,7 @@ router.post('/login', async (req, res) => {
       user = await User.findOne({ email })
 
       if (user && (await bcrypt.compare(password, user.password))) {
+        await logUserActivity(user, 'Login')
         res.json({
           _id: user._id,
           firstName: user.firstName,
@@ -150,6 +185,7 @@ router.post('/login', async (req, res) => {
           status: user.status,
           rating: user.rating,
           reviewsCount: user.reviewsCount,
+          avatar: user.avatar,
           token: generateToken(user._id)
         })
       } else {
@@ -175,6 +211,26 @@ router.get('/me', protect, async (req, res) => {
     }
   } catch (error) {
     console.error(error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// @desc    Log user logout activity
+// @route   POST /api/auth/logout
+// @access  Private
+router.post('/logout', protect, async (req, res) => {
+  try {
+    const { isAuto } = req.body
+    await ActivityLog.create({
+      userId: req.user._id,
+      email: req.user.email,
+      name: `${req.user.firstName} ${req.user.lastName}`,
+      role: req.user.role,
+      action: isAuto ? 'Auto-Logout' : 'Logout'
+    })
+    res.json({ status: 'OK', message: 'Logout activity logged' })
+  } catch (error) {
+    console.error('Error logging logout activity:', error)
     res.status(500).json({ message: 'Server error' })
   }
 })

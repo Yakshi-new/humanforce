@@ -79,11 +79,6 @@ const FAQS = [
   { q: 'Do professionals work in my timezone?', a: 'Yes! You can filter by timezone and availability. We have professionals across 40+ countries covering all major timezones.' },
 ]
 
-const PLANS = [
-  { name: 'Starter', price: 29, unit: '/hr', desc: 'Perfect for individuals and small teams', features: ['1 Professional', 'Basic matching', 'Email support', 'Standard SLA', '5 hrs/mo minimum'], popular: false },
-  { name: 'Business', price: 499, unit: '/mo', desc: 'For growing businesses needing consistent support', features: ['Up to 5 Professionals', 'AI-powered matching', 'Priority support 24/7', 'Analytics dashboard', 'Dedicated account manager'], popular: true },
-  { name: 'Enterprise', price: null, unit: 'custom', desc: 'Custom solutions for large-scale operations', features: ['Unlimited professionals', 'Custom AI workflows', 'SLA guarantees', 'API access', 'White-label options'], popular: false },
-]
 
 const COMPANIES = ['Accenture', 'Shopify', 'Stripe', 'Notion', 'Figma', 'Webflow', 'HubSpot', 'Slack']
 
@@ -277,40 +272,7 @@ export default function Home() {
         </div>
       </section>
 
-      {/* PRICING PREVIEW */}
-      <section className="section section-alt pricing-preview">
-        <div className="container">
-          <div className="section-header center">
-            <div className="section-tag"><CreditCard size={14} /> Pricing</div>
-            <h2 className="section-title">Simple, transparent pricing</h2>
-            <p className="section-sub">No hidden fees. No lock-in contracts. Cancel anytime.</p>
-          </div>
-          <div className="pricing-grid">
-            {PLANS.map((p, i) => (
-              <div key={i} className={`price-card ${p.popular ? 'price-popular' : ''}`}>
-                {p.popular && <div className="popular-badge">Most Popular</div>}
-                <div className="price-name">{p.name}</div>
-                <div className="price-amount">
-                  {p.price ? <><span className="price-currency">$</span>{p.price}</> : 'Custom'}
-                  <span className="price-unit">{p.unit}</span>
-                </div>
-                <p className="price-desc">{p.desc}</p>
-                <ul className="price-features">
-                  {p.features.map((f, j) => (
-                    <li key={j}><CheckCircle size={15} className="check-icon" />{f}</li>
-                  ))}
-                </ul>
-                <Link to={p.price ? '/register' : '/contact'} className={p.popular ? 'btn-primary' : 'btn-outline'}>
-                  {p.price ? 'Get Started' : 'Contact Sales'} <ArrowRight size={16} />
-                </Link>
-              </div>
-            ))}
-          </div>
-          <div className="pricing-cta-note">
-            <Link to="/pricing" className="btn-ghost">View full pricing details <ArrowRight size={15} /></Link>
-          </div>
-        </div>
-      </section>
+
 
       {/* FAQ */}
       <section className="section faq-section">
