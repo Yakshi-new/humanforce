@@ -13,7 +13,7 @@ const generateToken = (id) => {
   })
 }
 
-const logUserActivity = async (user, action = 'Login') => {
+const logUserActivity = async (user, action = 'Login', details = '') => {
   try {
     if (action === 'Login') {
       user.lastLogin = new Date()
@@ -24,7 +24,8 @@ const logUserActivity = async (user, action = 'Login') => {
       email: user.email,
       name: `${user.firstName} ${user.lastName}`,
       role: user.role,
-      action
+      action,
+      details: details || (action === 'Login' ? 'User logged in successfully' : action === 'Register' ? 'User registered a new account' : '')
     })
   } catch (error) {
     console.error(`Error logging user activity (${action}):`, error)
@@ -226,7 +227,8 @@ router.post('/logout', protect, async (req, res) => {
       email: req.user.email,
       name: `${req.user.firstName} ${req.user.lastName}`,
       role: req.user.role,
-      action: isAuto ? 'Auto-Logout' : 'Logout'
+      action: isAuto ? 'Auto-Logout' : 'Logout',
+      details: isAuto ? 'User was automatically logged out due to session expiration' : 'User manually logged out'
     })
     res.json({ status: 'OK', message: 'Logout activity logged' })
   } catch (error) {

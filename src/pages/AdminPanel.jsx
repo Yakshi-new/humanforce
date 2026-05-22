@@ -12,7 +12,7 @@ const NAV = [
   { icon: <UserCheck size={18}/>, label:'Providers', path:'/admin/providers' },
   { icon: <Briefcase size={18}/>, label:'Services', path:'/admin/services' },
   { icon: <CreditCard size={18}/>, label:'Transactions', path:'/admin/transactions' },
-  { icon: <Mail size={18}/>, label:'Enquiries', path:'/admin/enquiries' },
+  { icon: <Mail size={18}/>, label:'Enquiries', path:'/admin/enquiries', badge: 'newEnquiriesCount' },
   { icon: <History size={18}/>, label:'Log History', path:'/admin/logs' },
   { icon: <Settings size={18}/>, label:'Settings', path:'/admin/settings' },
 ]
@@ -157,6 +157,145 @@ function AdminHome() {
                 <tr>
                   <td colSpan="7" style={{ textAlign: 'center', color: 'var(--gray-500)', padding: '36px 0' }}>
                     🏖️ No pending or upcoming operations scheduled for today or tomorrow.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Unaccepted Bookings */}
+      <div className="dash-card" style={{ marginBottom: '28px' }}>
+        <div className="dash-card-header" style={{ borderBottom: '1px solid var(--gray-200)', paddingBottom: '14px', marginBottom: '16px' }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
+            🚨 Unaccepted Bookings (No Provider Assigned)
+          </h3>
+          <span className="status-pill status-pending" style={{ fontSize: '0.78rem', background: '#FFF3E0', color: '#EF6C00' }}>
+            {(stats.unacceptedBookings || []).length} Pending Assign
+          </span>
+        </div>
+        
+        <div className="orders-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Booking ID</th>
+                <th>Client Details</th>
+                <th>Service Info</th>
+                <th>Schedule Date & Time</th>
+                <th>Total Cost</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(stats.unacceptedBookings || []).map((b) => (
+                <tr key={b._id}>
+                  <td className="mono font-bold">{b.bookingId}</td>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                      <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#1E88E5', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', overflow: 'hidden', flexShrink: 0 }}>
+                        {b.client?.avatar ? (
+                          <img src={b.client.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          b.client?.firstName?.[0] || 'C'
+                        )}
+                      </div>
+                      <div>
+                        <div className="font-bold">{b.client?.firstName} {b.client?.lastName}</div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--gray-500)' }}>{b.client?.email}</div>
+                      </div>
+                    </div>
+                  </td>
+                  <td>
+                    <div className="font-bold">{b.service?.name}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--gray-500)' }}>{b.service?.category}</div>
+                  </td>
+                  <td>
+                    <div style={{ fontWeight: 600 }}>{b.date}</div>
+                    <div style={{ fontSize: '0.78rem', color: 'var(--gray-500)' }}>{b.time} ({b.hours} hrs)</div>
+                  </td>
+                  <td>₹{b.totalCost?.toLocaleString('en-IN')}</td>
+                  <td>
+                    <span className="status-pill status-pending">{b.status}</span>
+                  </td>
+                  <td>
+                    <Link to="/admin/requests" className="btn-primary" style={{ padding: '4px 10px', fontSize: '0.75rem', textDecoration: 'none' }}>
+                      Assign Buddy
+                    </Link>
+                  </td>
+                </tr>
+              ))}
+              {(stats.unacceptedBookings || []).length === 0 && (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', color: 'var(--gray-500)', padding: '36px 0' }}>
+                    ✅ All bookings have assigned providers.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Outstanding Payments Ledger */}
+      <div className="dash-card" style={{ marginBottom: '28px' }}>
+        <div className="dash-card-header" style={{ borderBottom: '1px solid var(--gray-200)', paddingBottom: '14px', marginBottom: '16px' }}>
+          <h3 style={{ display: 'flex', alignItems: 'center', gap: '8px', margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
+            💳 Outstanding Payments Ledger
+          </h3>
+          <span className="status-pill status-active" style={{ fontSize: '0.78rem' }}>
+            {(stats.outstandingBookings || []).filter(b => !b.remainingPaid).length} Outstanding
+          </span>
+        </div>
+        
+        <div className="orders-table-wrap">
+          <table className="data-table">
+            <thead>
+              <tr>
+                <th>Booking ID</th>
+                <th>Client Name</th>
+                <th>Assigned Buddy</th>
+                <th>Total Cost</th>
+                <th>Deposit Paid (20%)</th>
+                <th>Outstanding (80%)</th>
+                <th>Remaining Paid Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {(stats.outstandingBookings || []).map((b) => {
+                const outstandingAmount = (b.totalCost || 0) * 0.8;
+                return (
+                  <tr key={b._id}>
+                    <td className="mono font-bold">{b.bookingId}</td>
+                    <td>{b.client ? `${b.client.firstName} ${b.client.lastName}` : 'N/A'}</td>
+                    <td>
+                      {b.provider ? (
+                        `${b.provider.firstName} ${b.provider.lastName}`
+                      ) : (
+                        <span style={{ color: '#FF9800', fontWeight: 600 }}>Unassigned</span>
+                      )}
+                    </td>
+                    <td>₹{(b.totalCost || 0).toLocaleString('en-IN')}</td>
+                    <td style={{ color: '#43A047', fontWeight: 600 }}>₹{(b.depositPaid || 0).toLocaleString('en-IN')}</td>
+                    <td style={{ color: b.remainingPaid ? 'var(--gray-400)' : '#E53935', fontWeight: 600 }}>
+                      ₹{outstandingAmount.toLocaleString('en-IN')}
+                    </td>
+                    <td>
+                      {b.remainingPaid ? (
+                        <span className="status-pill status-completed">Completed</span>
+                      ) : (
+                        <span className="status-pill status-pending">Pending</span>
+                      )}
+                    </td>
+                  </tr>
+                );
+              })}
+              {(stats.outstandingBookings || []).length === 0 && (
+                <tr>
+                  <td colSpan="7" style={{ textAlign: 'center', color: 'var(--gray-500)', padding: '36px 0' }}>
+                    No bookings found in ledger.
                   </td>
                 </tr>
               )}
@@ -1218,6 +1357,7 @@ function AdminLogs() {
                 <th>Email</th>
                 <th>Role</th>
                 <th>Action</th>
+                <th>Details</th>
                 <th>Status</th>
               </tr>
             </thead>
@@ -1236,6 +1376,7 @@ function AdminLogs() {
                       {log.action}
                     </span>
                   </td>
+                  <td>{log.details || '-'}</td>
                   <td>
                     <span className="status-pill status-active">Recorded</span>
                   </td>
@@ -1243,7 +1384,7 @@ function AdminLogs() {
               ))}
               {filtered.length === 0 && (
                 <tr>
-                  <td colSpan="6" style={{ textAlign: 'center', color: 'var(--gray-500)', padding: '24px' }}>
+                  <td colSpan="7" style={{ textAlign: 'center', color: 'var(--gray-500)', padding: '24px' }}>
                     No activity logs recorded.
                   </td>
                 </tr>

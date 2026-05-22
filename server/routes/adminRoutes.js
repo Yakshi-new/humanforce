@@ -5,6 +5,7 @@ import Service from '../models/Service.js'
 import ActivityLog from '../models/ActivityLog.js'
 import Message from '../models/Message.js'
 import { protect, adminOnly } from '../middleware/auth.js'
+import Enquiry from '../models/Enquiry.js'
 
 const router = express.Router()
 
@@ -80,6 +81,18 @@ router.get('/stats', async (req, res) => {
     .sort('date time');
 
     const changeBuddyRequestsCount = await Booking.countDocuments({ changeBuddyRequested: true })
+    const newEnquiriesCount = await Enquiry.countDocuments({ status: 'New' })
+
+    const unacceptedBookings = await Booking.find({ status: 'Pending', provider: null })
+      .populate('client', 'firstName lastName email phone avatar')
+      .populate('service', 'name category')
+      .sort('-createdAt')
+
+    const outstandingBookings = await Booking.find({})
+      .populate('client', 'firstName lastName email phone avatar')
+      .populate('provider', 'firstName lastName email phone avatar')
+      .populate('service', 'name category')
+      .sort('-createdAt')
 
     res.json({
       totalUsers,
@@ -90,7 +103,10 @@ router.get('/stats', async (req, res) => {
       runningOperations,
       completedOperations,
       upcomingBookings,
-      changeBuddyRequestsCount
+      changeBuddyRequestsCount,
+      newEnquiriesCount,
+      unacceptedBookings,
+      outstandingBookings
     })
   } catch (error) {
     console.error(error)

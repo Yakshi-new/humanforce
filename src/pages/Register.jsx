@@ -5,7 +5,7 @@ import { api } from '../utils/api'
 import './Auth.css'
 import './Register.css'
 
-const STEPS = ['Role', 'Basic Info', 'Profile', 'Verification', 'Complete']
+const STEPS = ['Role', 'Basic Info', 'Profile', 'Verification']
 
 export default function Register() {
   const location = useLocation()
@@ -215,18 +215,6 @@ export default function Register() {
                 <button type="submit" className="btn-primary">Complete Registration <ArrowRight size={16}/></button>
               </div>
             </form>
-          )}
-
-          {/* Step 4: Done */}
-          {step === 4 && (
-            <div className="auth-success">
-              <div className="auth-success-icon">🎉</div>
-              <h3>Welcome to HumanForce!</h3>
-              <p>Your account has been created. {role === 'provider' ? 'Your profile is under review — you\'ll be notified within 24 hours.' : 'Start exploring services right away.'}</p>
-              <Link to={role==='provider'?'/provider':'/dashboard'} className="btn-primary" style={{marginTop:'20px',justifyContent:'center'}}>
-                Go to Dashboard <ArrowRight size={16}/>
-              </Link>
-            </div>
           )}
         </div>
       </div>

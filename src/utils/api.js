@@ -25,7 +25,6 @@ const handleResponse = async (res) => {
     localStorage.removeItem('hf_user')
     localStorage.removeItem('hf_last_activity')
     sessionStorage.removeItem('hf_session_active')
-    sessionStorage.setItem('hf_logout_reason', 'session-expired')
     // Use location.replace so history is not polluted
     window.location.replace('/login')
     return Promise.reject(new Error('Session expired'))

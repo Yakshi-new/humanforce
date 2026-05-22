@@ -413,6 +413,10 @@ function ProviderBookings({ bookings, onComplete, onStatusUpdate, onStart, onCan
       }
 
       const rzp = new window.Razorpay(options)
+      rzp.on('payment.failed', function (response) {
+        setPaying(false)
+        alert(response.error?.description || 'Payment failed.')
+      })
       rzp.open()
     } catch (err) {
       console.error(err)

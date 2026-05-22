@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, Link, useNavigate } from 'react-router-dom'
+import { useParams, Link, useNavigate, useLocation } from 'react-router-dom'
 import { Star, CheckCircle, ArrowRight, MessageSquare, Calendar, Shield, Clock, Globe, Zap } from 'lucide-react'
 import * as LucideIcons from 'lucide-react'
 import { api, loadRazorpayScript } from '../utils/api'
@@ -12,6 +12,7 @@ const getIcon = (name) => {
 export default function ServiceDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const [service, setService] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -20,6 +21,12 @@ export default function ServiceDetail() {
   const [booked, setBooked] = useState(false)
   const [bookingLoading, setBookingLoading] = useState(false)
   const [bookingError, setBookingError] = useState('')
+
+  useEffect(() => {
+    if (location.state?.bookingForm) {
+      setBookingForm(location.state.bookingForm)
+    }
+  }, [location.state])
 
   useEffect(() => {
     const fetchService = async () => {
@@ -42,7 +49,7 @@ export default function ServiceDetail() {
     setBookingError('')
 
     if (!api.isAuthenticated()) {
-      navigate('/login', { state: { from: `/services/${id}` } })
+      navigate('/login', { state: { from: `/services/${id}`, bookingForm } })
       return
     }
 
@@ -101,6 +108,10 @@ export default function ServiceDetail() {
       }
 
       const rzp = new window.Razorpay(options)
+      rzp.on('payment.failed', function (response) {
+        setBookingLoading(false)
+        setBookingError(response.error?.description || 'Payment failed.')
+      })
       rzp.open()
 
     } catch (err) {
@@ -113,7 +124,7 @@ export default function ServiceDetail() {
   const handleSimulatedBook = async () => {
     setBookingError('')
     if (!api.isAuthenticated()) {
-      navigate('/login', { state: { from: `/services/${id}` } })
+      navigate('/login', { state: { from: `/services/${id}`, bookingForm } })
       return
     }
     if (!bookingForm.date || !bookingForm.time) {
@@ -323,7 +334,7 @@ export default function ServiceDetail() {
                 </div>
                 
                 {!api.isAuthenticated() ? (
-                  <button type="button" className="btn-primary booking-btn" onClick={() => navigate('/login', { state: { from: `/services/${id}` } })}>
+                  <button type="button" className="btn-primary booking-btn" onClick={() => navigate('/login', { state: { from: `/services/${id}`, bookingForm } })}>
                     Sign In to Book
                   </button>
                 ) : (

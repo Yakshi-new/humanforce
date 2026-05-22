@@ -60,7 +60,8 @@ router.post('/', protect, async (req, res) => {
         email: req.user.email,
         name: `${req.user.firstName} ${req.user.lastName}`,
         role: req.user.role,
-        action: 'Booking Created'
+        action: 'Booking Created',
+        details: `Created booking ${booking.bookingId} for service "${booking.serviceName}" (${booking.hours} hours)`
       })
     } catch (logErr) {
       console.error('Error logging booking creation:', logErr)
@@ -136,7 +137,6 @@ router.put('/:id', protect, async (req, res) => {
     await booking.save()
 
     // Log action to ActivityLog
-    if (status) {
       let action = ''
       if (status === 'Active') action = 'Booking Accepted'
       else if (status === 'In-Progress') action = 'Booking Started'
@@ -150,13 +150,13 @@ router.put('/:id', protect, async (req, res) => {
             email: req.user.email,
             name: `${req.user.firstName} ${req.user.lastName}`,
             role: req.user.role,
-            action
+            action,
+            details: `Booking ${booking.bookingId} status updated to "${status}"`
           })
         } catch (logErr) {
           console.error('Error logging booking status update:', logErr)
         }
       }
-    }
 
     // If booking is completed and provider exists, add to provider's earnings!
     if (status === 'Completed' && booking.provider) {

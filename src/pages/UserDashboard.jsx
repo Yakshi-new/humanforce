@@ -179,6 +179,10 @@ function DashOrders({ bookings, onStatusUpdate, onPaymentSuccess }) {
       }
 
       const rzp = new window.Razorpay(options)
+      rzp.on('payment.failed', function (response) {
+        setPayingId(null)
+        alert(response.error?.description || 'Payment failed.')
+      })
       rzp.open()
     } catch (err) {
       console.error(err)
@@ -497,6 +501,10 @@ function DashBook({ onBookingCreated }) {
       }
 
       const rzp = new window.Razorpay(options)
+      rzp.on('payment.failed', function (response) {
+        setBookingLoading(false)
+        setBookingError(response.error?.description || 'Payment failed.')
+      })
       rzp.open()
 
     } catch (err) {
@@ -807,6 +815,10 @@ function DashPayments({ bookings, onPaymentSuccess }) {
       }
 
       const rzp = new window.Razorpay(options)
+      rzp.on('payment.failed', function (response) {
+        setPayingId(null)
+        alert(response.error?.description || 'Payment failed.')
+      })
       rzp.open()
     } catch (err) {
       console.error(err)

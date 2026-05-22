@@ -6,6 +6,7 @@ const activityLogSchema = new mongoose.Schema({
   name: { type: String, required: true },
   role: { type: String, required: true },
   action: { type: String, required: true },
+  details: { type: String, default: '' },
   timestamp: { type: Date, default: Date.now }
 })
 

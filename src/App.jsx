@@ -43,7 +43,6 @@ function Layout() {
   // ── Helper: wipe session and redirect ──────────────────────────────────────
   const doLogout = async (reason = 'inactivity') => {
     console.warn(`[Session] Auto-logout: ${reason}`)
-    sessionStorage.setItem('hf_logout_reason', reason)
     await api.logout(true)
     navigate('/login')
   }

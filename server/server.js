@@ -139,4 +139,5 @@ mongoose
   })
   .catch((err) => {
     console.error('MongoDB database connection failure:', err)
+    process.exit(1)
   })

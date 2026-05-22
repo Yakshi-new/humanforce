@@ -21,4 +21,12 @@ const userSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 })
 
+userSchema.pre('save', function (next) {
+  if (!this.avatar) {
+    const seed = encodeURIComponent(`${this.firstName}_${this.lastName}_${Date.now()}`)
+    this.avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`
+  }
+  next()
+})
+
 export default mongoose.model('User', userSchema)
