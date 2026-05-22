@@ -3,6 +3,7 @@ import User from '../models/User.js'
 import Booking from '../models/Booking.js'
 import Service from '../models/Service.js'
 import ActivityLog from '../models/ActivityLog.js'
+import Message from '../models/Message.js'
 import { protect, adminOnly } from '../middleware/auth.js'
 
 const router = express.Router()
@@ -19,19 +20,19 @@ router.get('/stats', async (req, res) => {
     const totalUsers = await User.countDocuments({ role: 'customer' })
     const totalProviders = await User.countDocuments({ role: 'provider' })
     
-    // Total running operations: status Active
-    const runningOperations = await Booking.countDocuments({ status: 'Active' })
+    // Total running operations: status Active or In-Progress
+    const runningOperations = await Booking.countDocuments({ status: { $in: ['Active', 'In-Progress'] } })
     
     // Total completed operations: status Completed
     const completedOperations = await Booking.countDocuments({ status: 'Completed' })
 
-    // Active bookings: status Pending or Active
+    // Active bookings: status Pending, Active, or In-Progress
     const activeBookings = await Booking.countDocuments({ 
-      status: { $in: ['Pending', 'Active'] } 
+      status: { $in: ['Pending', 'Active', 'In-Progress'] } 
     })
 
-    // Calculate revenue MTD (sum of all completed/active bookings)
-    const bookings = await Booking.find({ status: { $in: ['Active', 'Completed'] } })
+    // Calculate revenue MTD (sum of all completed/active/in-progress bookings)
+    const bookings = await Booking.find({ status: { $in: ['Active', 'In-Progress', 'Completed'] } })
     const revenue = bookings.reduce((sum, b) => sum + (b.totalCost || 0), 0)
 
     // Platform Commission is the sum of depositPaid (20%) for active/completed bookings
@@ -71,12 +72,14 @@ router.get('/stats', async (req, res) => {
 
     const upcomingBookings = await Booking.find({
       date: { $in: dateMatches },
-      status: { $in: ['Pending', 'Active'] }
+      status: { $in: ['Pending', 'Active', 'In-Progress'] }
     })
     .populate('client', 'firstName lastName email phone avatar')
     .populate('provider', 'firstName lastName avatar')
     .populate('service', 'name category')
     .sort('date time');
+
+    const changeBuddyRequestsCount = await Booking.countDocuments({ changeBuddyRequested: true })
 
     res.json({
       totalUsers,
@@ -86,7 +89,8 @@ router.get('/stats', async (req, res) => {
       platformCommission,
       runningOperations,
       completedOperations,
-      upcomingBookings
+      upcomingBookings,
+      changeBuddyRequestsCount
     })
   } catch (error) {
     console.error(error)
@@ -184,6 +188,63 @@ router.get('/users/:id/activity', async (req, res) => {
     .sort('-createdAt')
 
     res.json({ user, bookings })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// @desc    Get all messages in the system for auditing/tracing
+// @route   GET /api/admin/messages
+// @access  Private/Admin
+router.get('/messages', async (req, res) => {
+  try {
+    const messages = await Message.find({})
+      .populate('sender', 'firstName lastName email role avatar')
+      .populate('receiver', 'firstName lastName email role avatar')
+      .sort('-createdAt')
+    res.json(messages)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// @desc    Admin reassign provider for a booking
+// @route   PUT /api/admin/bookings/:id/reassign
+// @access  Private/Admin
+router.put('/bookings/:id/reassign', async (req, res) => {
+  const { providerId } = req.body
+  try {
+    const booking = await Booking.findById(req.params.id)
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' })
+    }
+
+    const provider = await User.findById(providerId)
+    if (!provider || provider.role !== 'provider') {
+      return res.status(400).json({ message: 'Invalid provider ID' })
+    }
+
+    booking.provider = providerId
+    booking.changeBuddyRequested = false // Clear the request state once reassigned!
+    await booking.save()
+
+    // Create activity log
+    try {
+      await ActivityLog.create({
+        userId: req.user._id,
+        email: req.user.email,
+        name: `${req.user.firstName} ${req.user.lastName}`,
+        role: req.user.role,
+        action: 'Booking Status Update',
+        details: `Admin reassigned buddy for booking ${booking.bookingId} to ${provider.firstName} ${provider.lastName}`
+      })
+    } catch (e) {
+      console.error(e)
+    }
+
+    res.json({ message: 'Buddy reassigned successfully', booking })
   } catch (error) {
     console.error(error)
     res.status(500).json({ message: 'Server error' })

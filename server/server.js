@@ -18,6 +18,7 @@ import bookingRoutes from './routes/bookingRoutes.js'
 import messageRoutes from './routes/messageRoutes.js'
 import adminRoutes from './routes/adminRoutes.js'
 import enquiryRoutes from './routes/enquiryRoutes.js'
+import { startAutoReassignJob } from './jobs/autoReassignProvider.js'
 
 dotenv.config()
 
@@ -127,6 +128,9 @@ mongoose
     
     // Run seeding
     await seedAccounts()
+
+    // Start background jobs
+    startAutoReassignJob()
 
     // Start Server
     app.listen(PORT, () => {

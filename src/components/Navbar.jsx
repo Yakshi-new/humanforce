@@ -19,8 +19,30 @@ export default function Navbar() {
   const [scrolled, setScrolled] = useState(false)
   const [open, setOpen] = useState(false)
   const [user, setUser] = useState(null)
+  const [unreadCount, setUnreadCount] = useState(0)
   const { pathname } = useLocation()
   const navigate = useNavigate()
+
+  // Sync auth state: re-read user on every route change AND whenever localStorage changes
+  const syncUser = () => {
+    const token = localStorage.getItem('hf_token')
+    const userData = token ? api.getUser() : null
+    setUser(userData)
+  }
+
+  const loadUnreadCount = async () => {
+    try {
+      const token = localStorage.getItem('hf_token')
+      if (token) {
+        const res = await api.getUnreadCount()
+        setUnreadCount(res.count)
+      } else {
+        setUnreadCount(0)
+      }
+    } catch (err) {
+      console.error(err)
+    }
+  }
 
   useEffect(() => {
     const handler = () => setScrolled(window.scrollY > 16)
@@ -30,8 +52,33 @@ export default function Navbar() {
 
   useEffect(() => {
     setOpen(false)
-    setUser(api.getUser())
+    syncUser()
   }, [pathname])
+
+  useEffect(() => {
+    // Listen for storage changes: token removed in any tab or by the 401 interceptor
+    const handleStorage = (e) => {
+      if (e.key === 'hf_token' || e.key === null) {
+        syncUser()
+      }
+    }
+    window.addEventListener('storage', handleStorage)
+
+    // Also poll lightly every 2s to catch same-tab clears
+    // (window.storage doesn't fire for changes in the same tab)
+    const poll = setInterval(syncUser, 2000)
+
+    return () => {
+      window.removeEventListener('storage', handleStorage)
+      clearInterval(poll)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadUnreadCount()
+    const interval = setInterval(loadUnreadCount, 5000)
+    return () => clearInterval(interval)
+  }, [user])
 
   const handleLogout = () => {
     api.logout()
@@ -100,6 +147,25 @@ export default function Navbar() {
                   {getInitials(user.firstName, user.lastName)}
                 </div>
                 <span>Dashboard</span>
+                {unreadCount > 0 && (
+                  <span style={{
+                    background: '#E53935',
+                    color: 'white',
+                    borderRadius: '50%',
+                    fontSize: '0.72rem',
+                    fontWeight: 700,
+                    padding: '2px 6px',
+                    minWidth: '18px',
+                    height: '18px',
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    lineHeight: 1,
+                    marginLeft: '4px'
+                  }}>
+                    {unreadCount}
+                  </span>
+                )}
               </Link>
               <button onClick={handleLogout} className="btn-ghost" style={{ padding: '8px 12px', display: 'flex', alignItems: 'center', gap: '6px', fontSize: '0.85rem' }}>
                 <LogOut size={14} /> Log Out
@@ -132,8 +198,28 @@ export default function Navbar() {
           <div className="mobile-actions">
             {user ? (
               <>
-                <Link to={getDashboardPath(user.role)} className="btn-primary" style={{ justifyContent: 'center', display: 'flex', gap: '8px' }}>
-                  <LayoutDashboard size={16} /> Go to Dashboard
+                <Link to={getDashboardPath(user.role)} className="btn-primary" style={{ justifyContent: 'center', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <LayoutDashboard size={16} /> 
+                  <span>Go to Dashboard</span>
+                  {unreadCount > 0 && (
+                    <span style={{
+                      background: 'white',
+                      color: '#E53935',
+                      borderRadius: '50%',
+                      fontSize: '0.75rem',
+                      fontWeight: 700,
+                      padding: '2px 6px',
+                      minWidth: '18px',
+                      height: '18px',
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      lineHeight: 1,
+                      marginLeft: '6px'
+                    }}>
+                      {unreadCount}
+                    </span>
+                  )}
                 </Link>
                 <button onClick={handleLogout} className="btn-outline" style={{ justifyContent: 'center', display: 'flex', gap: '8px', width: '100%', marginTop: '8px' }}>
                   <LogOut size={16} /> Log Out

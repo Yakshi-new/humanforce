@@ -19,6 +19,17 @@ const getHeaders = () => {
 }
 
 const handleResponse = async (res) => {
+  // 401 = token expired or invalid → force immediate re-login
+  if (res.status === 401) {
+    localStorage.removeItem('hf_token')
+    localStorage.removeItem('hf_user')
+    localStorage.removeItem('hf_last_activity')
+    sessionStorage.removeItem('hf_session_active')
+    sessionStorage.setItem('hf_logout_reason', 'session-expired')
+    // Use location.replace so history is not polluted
+    window.location.replace('/login')
+    return Promise.reject(new Error('Session expired'))
+  }
   if (!res.ok) {
     const errorData = await res.json().catch(() => ({}))
     throw new Error(errorData.message || 'Something went wrong')
@@ -40,6 +51,7 @@ export const api = {
     localStorage.setItem('hf_token', data.token)
     localStorage.setItem('hf_user', JSON.stringify(data))
     localStorage.setItem('hf_last_activity', Date.now().toString())
+    sessionStorage.setItem('hf_session_active', 'true')
     return data
   },
 
@@ -54,6 +66,7 @@ export const api = {
     localStorage.setItem('hf_token', data.token)
     localStorage.setItem('hf_user', JSON.stringify(data))
     localStorage.setItem('hf_last_activity', Date.now().toString())
+    sessionStorage.setItem('hf_session_active', 'true')
     return data
   },
 
@@ -80,15 +93,42 @@ export const api = {
     localStorage.removeItem('hf_token')
     localStorage.removeItem('hf_user')
     localStorage.removeItem('hf_last_activity')
+    sessionStorage.removeItem('hf_session_active')
   },
 
   getUser: () => {
+    // If the token is invalid or session is closed, make sure we return null
+    if (!api.isAuthenticated()) {
+      return null
+    }
     const user = localStorage.getItem('hf_user')
     return user ? JSON.parse(user) : null
   },
 
   isAuthenticated: () => {
-    return !!localStorage.getItem('hf_token')
+    const hasToken = !!localStorage.getItem('hf_token')
+    const sessionActive = !!sessionStorage.getItem('hf_session_active')
+
+    // Check inactivity timeout
+    const lastStr = localStorage.getItem('hf_last_activity')
+    let isStale = false
+    if (lastStr) {
+      const elapsed = Date.now() - parseInt(lastStr, 10)
+      if (elapsed >= 15 * 60 * 1000) { // 15 minutes of inactivity timeout
+        isStale = true
+      }
+    }
+
+    if (hasToken && (!sessionActive || isStale)) {
+      // Clean up stale session synchronously
+      localStorage.removeItem('hf_token')
+      localStorage.removeItem('hf_user')
+      localStorage.removeItem('hf_last_activity')
+      sessionStorage.removeItem('hf_session_active')
+      return false
+    }
+
+    return hasToken && sessionActive
   },
 
   // --- SERVICE ENDPOINTS ---
@@ -147,6 +187,31 @@ export const api = {
     return handleResponse(res)
   },
 
+  providerComplete: async (bookingId, method, remainingPaymentId) => {
+    const res = await customFetch(`/api/bookings/${bookingId}/provider-complete`, {
+      method: 'POST',
+      headers: getHeaders(),
+      body: JSON.stringify({ method, remainingPaymentId })
+    })
+    return handleResponse(res)
+  },
+
+  startBooking: async (bookingId) => {
+    const res = await customFetch(`/api/bookings/${bookingId}/start`, {
+      method: 'POST',
+      headers: getHeaders()
+    })
+    return handleResponse(res)
+  },
+
+  providerCancelBooking: async (bookingId) => {
+    const res = await customFetch(`/api/bookings/${bookingId}/provider-cancel`, {
+      method: 'POST',
+      headers: getHeaders()
+    })
+    return handleResponse(res)
+  },
+
   // --- MESSAGES ENDPOINTS ---
   getConversations: async () => {
     const res = await customFetch('/api/messages/conversations/threads', {
@@ -167,6 +232,13 @@ export const api = {
       method: 'POST',
       headers: getHeaders(),
       body: JSON.stringify({ receiverId, text })
+    })
+    return handleResponse(res)
+  },
+
+  getUnreadCount: async () => {
+    const res = await customFetch('/api/messages/unread-count', {
+      headers: getHeaders()
     })
     return handleResponse(res)
   },
@@ -244,6 +316,47 @@ export const api = {
       method: 'PUT',
       headers: getHeaders(),
       body: JSON.stringify({ status })
+    })
+    return handleResponse(res)
+  },
+
+  getEnquiries: async () => {
+    const res = await customFetch('/api/enquiries', {
+      headers: getHeaders()
+    })
+    return handleResponse(res)
+  },
+
+  updateEnquiryStatus: async (id, status) => {
+    const res = await customFetch(`/api/enquiries/${id}`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ status })
+    })
+    return handleResponse(res)
+  },
+
+  requestChangeBuddy: async (bookingId, reason) => {
+    const res = await customFetch(`/api/bookings/${bookingId}/request-change-buddy`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ reason })
+    })
+    return handleResponse(res)
+  },
+
+  reassignBuddy: async (bookingId, providerId) => {
+    const res = await customFetch(`/api/admin/bookings/${bookingId}/reassign`, {
+      method: 'PUT',
+      headers: getHeaders(),
+      body: JSON.stringify({ providerId })
+    })
+    return handleResponse(res)
+  },
+
+  getAdminMessages: async () => {
+    const res = await customFetch('/api/admin/messages', {
+      headers: getHeaders()
     })
     return handleResponse(res)
   }

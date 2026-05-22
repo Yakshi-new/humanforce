@@ -139,6 +139,7 @@ router.put('/:id', protect, async (req, res) => {
     if (status) {
       let action = ''
       if (status === 'Active') action = 'Booking Accepted'
+      else if (status === 'In-Progress') action = 'Booking Started'
       else if (status === 'Declined') action = 'Booking Declined'
       else if (status === 'Completed') action = 'Booking Completed'
 
@@ -182,7 +183,7 @@ router.put('/:id', protect, async (req, res) => {
 // @route   POST /api/bookings/:id/pay-remaining
 // @access  Private
 router.post('/:id/pay-remaining', protect, async (req, res) => {
-  const { remainingPaymentId } = req.body
+  const { remainingPaymentId, method } = req.body
 
   try {
     const booking = await Booking.findById(req.params.id)
@@ -191,12 +192,18 @@ router.post('/:id/pay-remaining', protect, async (req, res) => {
       return res.status(404).json({ message: 'Booking not found' })
     }
 
-    if (booking.client.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
+    // Allow provider OR client OR admin to confirm payment
+    const isClient = booking.client.toString() === req.user._id.toString()
+    const isProvider = booking.provider && booking.provider.toString() === req.user._id.toString()
+    const isAdmin = req.user.role === 'admin'
+
+    if (!isClient && !isProvider && !isAdmin) {
       return res.status(403).json({ message: 'Not authorized' })
     }
 
     booking.remainingPaid = true
-    booking.remainingPaymentId = remainingPaymentId || 'mock_pay_rem_id'
+    booking.remainingPaymentId = remainingPaymentId || 'cash_confirmed'
+    booking.remainingPaymentMethod = method || 'cash'
 
     await booking.save()
 
@@ -206,6 +213,254 @@ router.post('/:id/pay-remaining', protect, async (req, res) => {
       .populate('provider', 'firstName lastName email phone bio avatar')
 
     res.json(updatedBooking)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// @desc    Provider completes job — confirms payment method and marks booking Completed
+// @route   POST /api/bookings/:id/provider-complete
+// @access  Private (Provider only)
+router.post('/:id/provider-complete', protect, async (req, res) => {
+  const { method, remainingPaymentId } = req.body
+  // method: 'cash' | 'upi'
+  // remainingPaymentId: razorpay payment ID (for UPI) or omitted (for cash)
+
+  try {
+    const booking = await Booking.findById(req.params.id)
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' })
+    }
+
+    const isProvider = booking.provider && booking.provider.toString() === req.user._id.toString()
+    const isAdmin = req.user.role === 'admin'
+
+    if (!isProvider && !isAdmin) {
+      return res.status(403).json({ message: 'Not authorized: only the assigned provider can complete this booking' })
+    }
+
+    if (!['Active', 'In-Progress'].includes(booking.status)) {
+      return res.status(400).json({ message: 'Only Active or In-Progress bookings can be completed' })
+    }
+
+    // Mark payment and booking as complete
+    booking.remainingPaid = true
+    booking.remainingPaymentMethod = method || 'cash'
+    booking.remainingPaymentId = remainingPaymentId || `${method}_confirmed_${Date.now()}`
+    booking.status = 'Completed'
+
+    await booking.save()
+
+    // Update provider earnings
+    try {
+      const providerUser = await User.findById(booking.provider)
+      if (providerUser) {
+        providerUser.earnings = (providerUser.earnings || 0) + booking.totalCost
+        await providerUser.save()
+      }
+    } catch (e) {
+      console.error('Earnings update error:', e)
+    }
+
+    // Activity log
+    try {
+      await ActivityLog.create({
+        userId: req.user._id,
+        email: req.user.email,
+        name: `${req.user.firstName} ${req.user.lastName}`,
+        role: req.user.role,
+        action: 'Booking Completed',
+        details: `Booking ${booking.bookingId} completed via ${method} payment`
+      })
+    } catch (e) {
+      console.error('Log error:', e)
+    }
+
+    const updatedBooking = await Booking.findById(booking._id)
+      .populate('service')
+      .populate('client', 'firstName lastName email phone company avatar')
+      .populate('provider', 'firstName lastName email phone bio avatar')
+
+    res.json(updatedBooking)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// @desc    Provider starts service
+// @route   POST /api/bookings/:id/start
+// @access  Private (Provider or Admin)
+router.post('/:id/start', protect, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' })
+    }
+
+    const isProvider = booking.provider && booking.provider.toString() === req.user._id.toString()
+    const isAdmin = req.user.role === 'admin'
+
+    if (!isProvider && !isAdmin) {
+      return res.status(403).json({ message: 'Not authorized: only the assigned provider can start this service' })
+    }
+
+    if (booking.status !== 'Active') {
+      return res.status(400).json({ message: 'Only accepted (Active) bookings can be started' })
+    }
+
+    booking.status = 'In-Progress'
+    await booking.save()
+
+    // Activity log
+    try {
+      await ActivityLog.create({
+        userId: req.user._id,
+        email: req.user.email,
+        name: `${req.user.firstName} ${req.user.lastName}`,
+        role: req.user.role,
+        action: 'Booking Started',
+        details: `Booking ${booking.bookingId} service started`
+      })
+    } catch (e) {
+      console.error('Log error:', e)
+    }
+
+    const updatedBooking = await Booking.findById(booking._id)
+      .populate('service')
+      .populate('client', 'firstName lastName email phone company avatar')
+      .populate('provider', 'firstName lastName email phone bio avatar')
+
+    res.json(updatedBooking)
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// @desc    Provider cancels accepted/started service with 30% penalty
+// @route   POST /api/bookings/:id/provider-cancel
+// @access  Private (Provider or Admin)
+router.post('/:id/provider-cancel', protect, async (req, res) => {
+  try {
+    const booking = await Booking.findById(req.params.id)
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' })
+    }
+
+    const isProvider = booking.provider && booking.provider.toString() === req.user._id.toString()
+    const isAdmin = req.user.role === 'admin'
+
+    if (!isProvider && !isAdmin) {
+      return res.status(403).json({ message: 'Not authorized: only the assigned provider can cancel this service' })
+    }
+
+    if (!['Active', 'In-Progress'].includes(booking.status)) {
+      return res.status(400).json({ message: 'Only accepted (Active) or In-Progress bookings can be cancelled by the provider' })
+    }
+
+    // Provider who cancelled
+    const providerId = booking.provider
+    const totalCost = booking.totalCost
+    const penalty = totalCost * 0.3
+
+    // Apply penalty to the provider's earnings
+    const providerUser = await User.findById(providerId)
+    if (providerUser) {
+      providerUser.earnings = (providerUser.earnings || 0) - penalty
+      await providerUser.save()
+    }
+
+    // Log the cancellation activity with penalty details
+    try {
+      await ActivityLog.create({
+        userId: req.user._id,
+        email: req.user.email,
+        name: `${req.user.firstName} ${req.user.lastName}`,
+        role: req.user.role,
+        action: `Booking Cancelled by Provider - 30% Penalty (₹${penalty}) Applied`,
+        details: `Provider ${providerUser ? `${providerUser.firstName} ${providerUser.lastName}` : 'Buddy'} cancelled booking ${booking.bookingId}.`
+      })
+    } catch (e) {
+      console.error('Log error:', e)
+    }
+
+    // Reset booking back to Pending and unassigned
+    booking.provider = null
+    booking.status = 'Pending'
+    // Clear change requests or other fields if any
+    booking.changeBuddyRequested = false
+    booking.changeBuddyReason = ''
+    booking.lastReassignedAt = new Date() // Set time of re-assignment
+    await booking.save()
+
+    const updatedBooking = await Booking.findById(booking._id)
+      .populate('service')
+      .populate('client', 'firstName lastName email phone company avatar')
+      .populate('provider', 'firstName lastName email phone bio avatar')
+
+    res.json({
+      message: `Booking cancelled successfully. A 30% penalty of ₹${penalty} has been deducted from your earnings.`,
+      booking: updatedBooking
+    })
+  } catch (error) {
+    console.error(error)
+    res.status(500).json({ message: 'Server error' })
+  }
+})
+
+// @desc    Request to change buddy for a booking
+// @route   PUT /api/bookings/:id/request-change-buddy
+// @access  Private
+router.put('/:id/request-change-buddy', protect, async (req, res) => {
+  const { reason } = req.body
+  try {
+    const booking = await Booking.findById(req.params.id)
+    if (!booking) {
+      return res.status(404).json({ message: 'Booking not found' })
+    }
+
+    if (booking.client.toString() !== req.user._id.toString()) {
+      return res.status(403).json({ message: 'Not authorized to request buddy change for this booking' })
+    }
+
+    // Check if it is before 30 mins of booking scheduled time
+    let bookingDateTime = new Date(`${booking.date}T${booking.time}`)
+    
+    // Fallback in case date/time string is in a non-standard format
+    if (isNaN(bookingDateTime.getTime())) {
+      bookingDateTime = new Date(booking.date)
+    }
+
+    if (!isNaN(bookingDateTime.getTime())) {
+      const now = new Date()
+      const timeDiff = bookingDateTime.getTime() - now.getTime()
+      const diffMinutes = timeDiff / (1000 * 60)
+      if (diffMinutes < 30) {
+        return res.status(400).json({ message: 'Buddy change can only be requested up to 30 minutes before the scheduled time.' })
+      }
+    }
+
+    booking.changeBuddyRequested = true
+    booking.changeBuddyReason = reason || 'No reason provided'
+    await booking.save()
+
+    // Add activity log
+    try {
+      await ActivityLog.create({
+        userId: req.user._id,
+        email: req.user.email,
+        name: `${req.user.firstName} ${req.user.lastName}`,
+        role: req.user.role,
+        action: 'Booking Status Update',
+        details: `Buddy change requested for booking ${booking.bookingId}`
+      })
+    } catch (e) {
+      console.error(e)
+    }
+
+    res.json({ message: 'Buddy change request submitted successfully', booking })
   } catch (error) {
     console.error(error)
     res.status(500).json({ message: 'Server error' })

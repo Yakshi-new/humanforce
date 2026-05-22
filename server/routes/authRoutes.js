@@ -9,7 +9,7 @@ const router = express.Router()
 
 const generateToken = (id) => {
   return jwt.sign({ id }, process.env.JWT_SECRET || 'humanforce_secure_jwt_token_secret_key_9988776655', {
-    expiresIn: '30d',
+    expiresIn: '2h',
   })
 }
 

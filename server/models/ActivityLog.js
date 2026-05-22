@@ -5,7 +5,7 @@ const activityLogSchema = new mongoose.Schema({
   email: { type: String, required: true },
   name: { type: String, required: true },
   role: { type: String, required: true },
-  action: { type: String, enum: ['Login', 'Logout', 'Auto-Logout', 'Register', 'Booking Created', 'Booking Accepted', 'Booking Declined', 'Booking Completed'], required: true },
+  action: { type: String, required: true },
   timestamp: { type: Date, default: Date.now }
 })
 

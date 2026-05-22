@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { BrowserRouter, Routes, Route, useLocation, useNavigate } from 'react-router-dom'
 import { api } from './utils/api'
 import Navbar from './components/Navbar'
@@ -16,6 +16,7 @@ import Pricing from './pages/Pricing'
 import About from './pages/About'
 import Contact from './pages/Contact'
 import Blog from './pages/Blog'
+import BlogDetail from './pages/BlogDetail'
 import Login from './pages/Login'
 import Register from './pages/Register'
 import UserDashboard from './pages/UserDashboard'
@@ -23,94 +24,180 @@ import ProviderDashboard from './pages/ProviderDashboard'
 import AdminPanel from './pages/AdminPanel'
 import Categories from './pages/Categories'
 
-const DASH_PREFIXES = ['/dashboard', '/provider', '/admin']
+// ─── Constants ─────────────────────────────────────────────────────────────
+const INACTIVITY_TIMEOUT_MS  = 15 * 60 * 1000  // 15 min of no user action
+const CHECK_INTERVAL_MS      = 5  * 1000        // check every 5 s
+const OFFLINE_TIMEOUT_MS     = 10 * 60 * 1000  // 10 min offline → logout
+const DASH_PREFIXES          = ['/dashboard', '/provider', '/admin']
 
+// ─── Main layout with full session security ─────────────────────────────────
 function Layout() {
   const { pathname } = useLocation()
   const navigate = useNavigate()
   const isDash = DASH_PREFIXES.some(p => pathname.startsWith(p))
 
-  useEffect(() => {
-    // 1. Storage sync listener: If token is removed in another tab, redirect
-    const handleStorageChange = (e) => {
-      if (e.key === 'hf_token' && !e.newValue) {
-        navigate('/login')
-      }
+  const offlineAtRef    = useRef(null)   // timestamp when we went offline
+  const throttleRef     = useRef(null)
+  const intervalRef     = useRef(null)
+
+  // ── Helper: wipe session and redirect ──────────────────────────────────────
+  const doLogout = async (reason = 'inactivity') => {
+    console.warn(`[Session] Auto-logout: ${reason}`)
+    sessionStorage.setItem('hf_logout_reason', reason)
+    await api.logout(true)
+    navigate('/login')
+  }
+
+  // ── Helper: reset activity timestamp to now ────────────────────────────────
+  const touchActivity = () => {
+    if (!api.isAuthenticated()) return
+    if (!throttleRef.current) {
+      localStorage.setItem('hf_last_activity', Date.now().toString())
+      throttleRef.current = setTimeout(() => { throttleRef.current = null }, 1000)
     }
-    window.addEventListener('storage', handleStorageChange)
+  }
 
-    // 2. Inactivity tracking
-    let throttleTimeout = null
-    const updateActivity = () => {
-      if (!api.isAuthenticated()) return
-      const now = Date.now()
-      if (!throttleTimeout) {
-        localStorage.setItem('hf_last_activity', now.toString())
-        throttleTimeout = setTimeout(() => {
-          throttleTimeout = null
-        }, 1000)
-      }
+  // ── Core check: called every 5 s ──────────────────────────────────────────
+  const checkSession = async () => {
+    if (!api.isAuthenticated()) return
+
+    const lastStr = localStorage.getItem('hf_last_activity')
+    if (!lastStr) {
+      localStorage.setItem('hf_last_activity', Date.now().toString())
+      return
     }
 
-    const checkInactivity = async () => {
+    const elapsed = Date.now() - parseInt(lastStr, 10)
+
+    if (elapsed >= INACTIVITY_TIMEOUT_MS) {
+      doLogout('inactivity')
+    }
+  }
+
+  // ── On tab/window visibility change ────────────────────────────────────────
+  const handleVisibilityChange = async () => {
+    if (document.visibilityState === 'visible') {
       if (!api.isAuthenticated()) return
 
-      const lastActivityStr = localStorage.getItem('hf_last_activity')
-      if (!lastActivityStr) {
-        localStorage.setItem('hf_last_activity', Date.now().toString())
+      const closedAtStr = sessionStorage.getItem('hf_closed_at')
+      if (closedAtStr) {
+        const gap = Date.now() - parseInt(closedAtStr, 10)
+        sessionStorage.removeItem('hf_closed_at')
+        if (gap >= INACTIVITY_TIMEOUT_MS) {
+          doLogout('inactivity-while-away')
+          return
+        }
+      }
+
+      await checkSession()
+    }
+  }
+
+  // ── Internet connection events ─────────────────────────────────────────────
+  const handleOffline = () => {
+    offlineAtRef.current = Date.now()
+    console.warn('[Session] Internet connection lost.')
+  }
+
+  const handleOnline = () => {
+    if (offlineAtRef.current && api.isAuthenticated()) {
+      const offlineDuration = Date.now() - offlineAtRef.current
+      offlineAtRef.current = null
+      if (offlineDuration >= OFFLINE_TIMEOUT_MS) {
+        doLogout('offline-too-long')
         return
       }
+    }
+    offlineAtRef.current = null
+    console.info('[Session] Internet connection restored.')
+  }
 
-      const lastActivity = parseInt(lastActivityStr, 10)
-      const elapsed = Date.now() - lastActivity
-      const INACTIVITY_TIMEOUT = 15 * 60 * 1000 // 15 minutes
+  // ── Window close / navigate away ──────────────────────────────────────────
+  const handleBeforeUnload = () => {
+    if (api.isAuthenticated()) {
+      sessionStorage.setItem('hf_closed_at', Date.now().toString())
+    }
+  }
 
-      if (elapsed >= INACTIVITY_TIMEOUT) {
-        await api.logout(true)
-        navigate('/login')
+  // ── Cross-tab logout sync ──────────────────────────────────────────────────
+  const handleStorageChange = (e) => {
+    if (e.key === 'hf_token' && !e.newValue) {
+      navigate('/login')
+    }
+  }
+
+  // ── Mount / unmount ────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (api.isAuthenticated()) {
+      const closedAtStr = sessionStorage.getItem('hf_closed_at')
+      if (closedAtStr) {
+        const gap = Date.now() - parseInt(closedAtStr, 10)
+        sessionStorage.removeItem('hf_closed_at')
+        if (gap >= INACTIVITY_TIMEOUT_MS) {
+          doLogout('inactivity-while-away')
+          return
+        }
+      }
+
+      const lastStr = localStorage.getItem('hf_last_activity')
+      if (lastStr) {
+        const elapsed = Date.now() - parseInt(lastStr, 10)
+        if (elapsed >= INACTIVITY_TIMEOUT_MS) {
+          doLogout('inactivity')
+          return
+        }
+      }
+
+      if (!localStorage.getItem('hf_last_activity')) {
+        localStorage.setItem('hf_last_activity', Date.now().toString())
       }
     }
 
-    const events = ['mousemove', 'keydown', 'scroll', 'click', 'touchstart']
-    events.forEach((event) => {
-      window.addEventListener(event, updateActivity)
-    })
+    const ACTIVITY_EVENTS = ['mousemove', 'keydown', 'scroll', 'click', 'touchstart', 'pointerdown']
+    ACTIVITY_EVENTS.forEach(ev => window.addEventListener(ev, touchActivity, { passive: true }))
 
-    const intervalId = setInterval(checkInactivity, 5000)
+    intervalRef.current = setInterval(checkSession, CHECK_INTERVAL_MS)
 
-    // Initial activity set if logged in but hf_last_activity not set
-    if (api.isAuthenticated() && !localStorage.getItem('hf_last_activity')) {
-      localStorage.setItem('hf_last_activity', Date.now().toString())
-    }
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
+    window.addEventListener('offline', handleOffline)
+    window.addEventListener('online', handleOnline)
+
+    window.addEventListener('beforeunload', handleBeforeUnload)
+
+    window.addEventListener('storage', handleStorageChange)
 
     return () => {
-      events.forEach((event) => {
-        window.removeEventListener(event, updateActivity)
-      })
+      ACTIVITY_EVENTS.forEach(ev => window.removeEventListener(ev, touchActivity))
+      clearInterval(intervalRef.current)
+      if (throttleRef.current) clearTimeout(throttleRef.current)
+      document.removeEventListener('visibilitychange', handleVisibilityChange)
+      window.removeEventListener('offline', handleOffline)
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('beforeunload', handleBeforeUnload)
       window.removeEventListener('storage', handleStorageChange)
-      clearInterval(intervalId)
-      if (throttleTimeout) clearTimeout(throttleTimeout)
     }
-  }, [navigate])
+  }, [navigate])  // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <>
       {!isDash && <Navbar />}
       <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="/services" element={<Services />} />
+        <Route path="/"             element={<Home />} />
+        <Route path="/services"     element={<Services />} />
         <Route path="/services/:id" element={<ServiceDetail />} />
-        <Route path="/categories" element={<Categories />} />
+        <Route path="/categories"   element={<Categories />} />
         <Route path="/how-it-works" element={<HowItWorks />} />
-        <Route path="/pricing" element={<Pricing />} />
-        <Route path="/about" element={<About />} />
-        <Route path="/contact" element={<Contact />} />
-        <Route path="/blog" element={<Blog />} />
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-        <Route path="/dashboard/*" element={<UserDashboard />} />
-        <Route path="/provider/*" element={<ProviderDashboard />} />
-        <Route path="/admin/*" element={<AdminPanel />} />
+        <Route path="/pricing"      element={<Pricing />} />
+        <Route path="/about"        element={<About />} />
+        <Route path="/contact"      element={<Contact />} />
+        <Route path="/blog"         element={<Blog />} />
+        <Route path="/blog/:id"     element={<BlogDetail />} />
+        <Route path="/login"        element={<Login />} />
+        <Route path="/register"     element={<Register />} />
+        <Route path="/dashboard/*"  element={<UserDashboard />} />
+        <Route path="/provider/*"   element={<ProviderDashboard />} />
+        <Route path="/admin/*"      element={<AdminPanel />} />
       </Routes>
       {!isDash && <Footer />}
       {!isDash && <AIChatbot />}

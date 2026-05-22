@@ -52,8 +52,8 @@ export default function Footer() {
                 ['Careers', '#'],
                 ['Press', '#'],
                 ['Partners', '#'],
-              ].map(([label, href]) => (
-                <li key={href}><Link to={href}>{label}</Link></li>
+              ].map(([label, href], idx) => (
+                <li key={label + idx}><Link to={href}>{label}</Link></li>
               ))}
             </ul>
           </div>

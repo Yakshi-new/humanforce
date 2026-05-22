@@ -20,14 +20,6 @@ export default function Services() {
   const [search, setSearch] = useState('')
   const [category, setCategory] = useState('All')
   
-  // Booking modal state
-  const [booked, setBooked] = useState(null)
-  const [showModal, setShowModal] = useState(false)
-  const [bookingForm, setBookingForm] = useState({ date: '', time: '', hours: 2, note: '' })
-  const [confirmed, setConfirmed] = useState(false)
-  const [bookingError, setBookingError] = useState('')
-  const [bookingLoading, setBookingLoading] = useState(false)
-
   useEffect(() => {
     const fetchServices = async () => {
       try {
@@ -51,38 +43,11 @@ export default function Services() {
   })
 
   const openBooking = (service) => {
-    setBooked(service)
-    setShowModal(true)
-    setConfirmed(false)
-    setBookingError('')
-    setBookingForm({ date: '', time: '', hours: 2, note: '' })
-  }
-
-  const handleConfirm = async (e) => {
-    e.preventDefault()
-    setBookingError('')
-
-    // Authentication Guard
-    if (!api.isAuthenticated()) {
-      navigate('/login')
-      return
-    }
-
-    try {
-      setBookingLoading(true)
-      await api.createBooking({
-        serviceId: booked.serviceId,
-        date: bookingForm.date,
-        time: bookingForm.time,
-        hours: bookingForm.hours,
-        note: bookingForm.note
-      })
-      setConfirmed(true)
-    } catch (err) {
-      console.error(err)
-      setBookingError(err.message || 'Failed to submit booking. Try again.')
-    } finally {
-      setBookingLoading(false)
+    const serviceId = service._id || service.serviceId
+    if (api.isAuthenticated()) {
+      navigate(`/dashboard/book?service=${serviceId}`)
+    } else {
+      navigate('/login', { state: { from: `/dashboard/book?service=${serviceId}` } })
     }
   }
 
@@ -194,111 +159,6 @@ export default function Services() {
           </>
         )}
       </div>
-
-      {/* GST Notice */}
-      <div className="gst-notice">
-        <div className="container">
-          <p>* All prices are starting rates. Final pricing may vary based on location, duration, and service specifics. GST applicable as per government norms. Registered on <strong>HumanOnRent.AI</strong>.</p>
-        </div>
-      </div>
-
-      {/* Booking Modal */}
-      {showModal && booked && (
-        <div className="modal-overlay" onClick={() => setShowModal(false)}>
-          <div className="booking-modal" onClick={e => e.stopPropagation()}>
-            <button className="modal-close" onClick={() => setShowModal(false)}><X size={20} /></button>
-
-            {bookingError && (
-              <div className="booking-error" style={{
-                background: 'rgba(229,57,53,0.1)',
-                border: '1px solid rgba(229,57,53,0.3)',
-                color: '#E53935',
-                padding: '10px 14px',
-                borderRadius: '6px',
-                fontSize: '0.85rem',
-                margin: '16px',
-                fontWeight: 500
-              }}>
-                {bookingError}
-              </div>
-            )}
-
-            {!confirmed ? (
-              <>
-                <div className="modal-header" style={{ background: booked.bg }}>
-                  <div className="modal-icon">
-                    {(() => {
-                      const ModalIcon = getIcon(booked.iconName)
-                      return <ModalIcon size={32} color="white" />
-                    })()}
-                  </div>
-                  <h2>{booked.name}</h2>
-                  <p>₹{booked.price.toLocaleString('en-IN')}/hr + GST</p>
-                </div>
-                <form className="booking-form" onSubmit={handleConfirm}>
-                  <div className="form-row">
-                    <div className="form-group">
-                      <label>Date</label>
-                      <input type="date" required value={bookingForm.date}
-                        min={new Date().toISOString().split('T')[0]}
-                        onChange={e => setBookingForm({ ...bookingForm, date: e.target.value })} />
-                    </div>
-                    <div className="form-group">
-                      <label>Time</label>
-                      <input type="time" required value={bookingForm.time}
-                        onChange={e => setBookingForm({ ...bookingForm, time: e.target.value })} />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label>Duration: <strong>{bookingForm.hours} hour{bookingForm.hours > 1 ? 's' : ''}</strong></label>
-                    <input type="range" min="1" max="8" value={bookingForm.hours}
-                      onChange={e => setBookingForm({ ...bookingForm, hours: +e.target.value })}
-                      className="hours-slider" style={{ '--scolor': booked.color }} />
-                    <div className="slider-labels"><span>1 hr</span><span>8 hrs</span></div>
-                  </div>
-                  <div className="form-group">
-                    <label>Special Requests (optional)</label>
-                    <textarea rows={3} placeholder="Any specific requirements..." value={bookingForm.note}
-                      onChange={e => setBookingForm({ ...bookingForm, note: e.target.value })} />
-                  </div>
-                  <div className="booking-summary">
-                    <span>Total Estimate</span>
-                    <strong style={{ color: booked.color }}>₹{(booked.price * bookingForm.hours).toLocaleString('en-IN')} + GST</strong>
-                  </div>
-                  
-                  {!api.isAuthenticated() ? (
-                    <button type="button" className="btn-book-confirm" style={{ background: '#37474F' }} onClick={() => navigate('/login')}>
-                      Sign In to Book
-                    </button>
-                  ) : (
-                    <button type="submit" disabled={bookingLoading} className="btn-book-confirm" style={{ background: booked.bg }}>
-                      {bookingLoading ? 'Processing Booking...' : 'Confirm Booking'}
-                    </button>
-                  )}
-                </form>
-              </>
-            ) : (
-              <div className="booking-success">
-                <div className="success-icon" style={{ background: booked.bg }}>
-                  <CheckCircle size={48} color="white" />
-                </div>
-                <h2>Booking Confirmed!</h2>
-                <p>Your <strong>{booked.name}</strong> buddy has been booked for <strong>{bookingForm.hours} hour{bookingForm.hours > 1 ? 's' : ''}</strong> on <strong>{bookingForm.date}</strong> at <strong>{bookingForm.time}</strong>.</p>
-                <p className="success-note">A friendly buddy will be paired with you immediately. Monitor updates on your dashboard.</p>
-                <p className="success-amount" style={{ color: booked.color }}>Total: ₹{(booked.price * bookingForm.hours).toLocaleString('en-IN')} + GST</p>
-                <div className="success-actions">
-                  <button className="btn-view-dash" onClick={() => setShowModal(false)}>
-                    Back to Services
-                  </button>
-                  <Link to="/dashboard" className="btn-primary" onClick={() => setShowModal(false)}>
-                    View Dashboard
-                  </Link>
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
-      )}
     </main>
   )
 }

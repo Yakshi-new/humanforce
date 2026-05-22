@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Mail, Lock, Phone, Eye, EyeOff, Zap, ArrowRight } from 'lucide-react'
+import { Mail, Lock, Phone, Eye, EyeOff, Zap, ArrowRight, ShieldAlert } from 'lucide-react'
 import { api } from '../utils/api'
 import './Auth.css'
 
@@ -16,6 +16,19 @@ export default function Login() {
   const [otpSent, setOtpSent] = useState(false)
   const [forgot, setForgot] = useState(false)
   const [error, setError] = useState('')
+  const [logoutReason, setLogoutReason] = useState('')
+
+  useEffect(() => {
+    const reason = sessionStorage.getItem('hf_logout_reason')
+    if (reason) {
+      sessionStorage.removeItem('hf_logout_reason')
+      // Only show a message for server-side token rejection (401).
+      // All other auto-logouts (inactivity, offline, tab-close) are silent.
+      if (reason === 'session-expired') {
+        setLogoutReason('Your session has expired. Please log in again to continue.')
+      }
+    }
+  }, [])
 
   const handleEmail = async e => {
     e.preventDefault()
@@ -80,6 +93,27 @@ export default function Login() {
 
       <div className="auth-right">
         <div className="auth-box">
+          {/* Auto-logout reason banner */}
+          {logoutReason && (
+            <div style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '10px',
+              background: 'rgba(255,152,0,0.08)',
+              border: '1px solid rgba(255,152,0,0.4)',
+              color: '#FF9800',
+              padding: '12px 14px',
+              borderRadius: '8px',
+              fontSize: '0.83rem',
+              marginBottom: '16px',
+              fontWeight: 500,
+              lineHeight: '1.4'
+            }}>
+              <ShieldAlert size={16} style={{ flexShrink: 0, marginTop: '2px' }} />
+              {logoutReason}
+            </div>
+          )}
+
           {error && (
             <div className="auth-error-banner" style={{
               background: 'rgba(229,57,53,0.1)',

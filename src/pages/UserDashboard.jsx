@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react'
 import { Link, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
-import { LayoutDashboard, ShoppingBag, MessageSquare, Bell, CreditCard, Settings, LogOut, Zap, Clock, Star, ArrowRight, Menu, X, Send, Calendar, Shield, CheckCircle, Search } from 'lucide-react'
+import { LayoutDashboard, ShoppingBag, MessageSquare, Bell, CreditCard, Settings, LogOut, Zap, Clock, Star, ArrowRight, Menu, X, Send, Calendar, Shield, CheckCircle, Search, Check, CheckCheck } from 'lucide-react'
 import { api, loadRazorpayScript } from '../utils/api'
 import './Dashboard.css'
 
@@ -15,15 +15,15 @@ const NAV = [
 ]
 
 function DashHome({ bookings }) {
-  const activeCount = bookings.filter(b => ['Pending', 'Active'].includes(b.status)).length
+  const activeCount = bookings.filter(b => ['Pending', 'Active', 'In-Progress'].includes(b.status)).length
   const totalSpent = bookings
-    .filter(b => ['Active', 'Completed'].includes(b.status))
+    .filter(b => ['Active', 'In-Progress', 'Completed'].includes(b.status))
     .reduce((sum, b) => sum + (b.totalCost || 0), 0)
   const totalHours = bookings.reduce((sum, b) => sum + (b.hours || 0), 0)
 
   // Active providers based on current bookings
   const activeProviders = bookings
-    .filter(b => b.status === 'Active' && b.provider)
+    .filter(b => ['Active', 'In-Progress'].includes(b.status) && b.provider)
     .map(b => b.provider)
     // De-duplicate
     .filter((v, i, a) => a.findIndex(t => t._id === v._id) === i)
@@ -200,6 +200,36 @@ function DashOrders({ bookings, onStatusUpdate, onPaymentSuccess }) {
     }
   }
 
+  const handleRequestChangeBuddy = async (booking) => {
+    const reason = prompt('Please enter the reason for requesting a buddy change:')
+    if (reason === null) return
+    try {
+      await api.requestChangeBuddy(booking._id, reason)
+      alert('Buddy change request submitted successfully!')
+      if (onPaymentSuccess) onPaymentSuccess()
+    } catch (err) {
+      console.error(err)
+      alert('Failed to request change: ' + err.message)
+    }
+  }
+
+  const canRequestChange = (booking) => {
+    if (!booking.provider) return false
+    if (['Completed', 'Declined'].includes(booking.status)) return false
+    if (booking.changeBuddyRequested) return false
+
+    let bookingDateTime = new Date(`${booking.date}T${booking.time}`)
+    if (isNaN(bookingDateTime.getTime())) {
+      bookingDateTime = new Date(booking.date)
+    }
+    if (isNaN(bookingDateTime.getTime())) return true
+
+    const now = new Date()
+    const timeDiff = bookingDateTime.getTime() - now.getTime()
+    const diffMinutes = timeDiff / (1000 * 60)
+    return diffMinutes >= 30
+  }
+
   return (
     <div className="dash-content">
       <h2 className="dash-page-title">My Bookings</h2>
@@ -229,7 +259,29 @@ function DashOrders({ bookings, onStatusUpdate, onPaymentSuccess }) {
                       <div className="font-bold">{o.service?.name}</div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--gray-400)' }}>{o.service?.category}</div>
                     </td>
-                    <td>{o.provider ? `${o.provider.firstName} ${o.provider.lastName}` : <span style={{ color: 'var(--gray-400)', fontSize: '0.82rem' }}>Assigning...</span>}</td>
+                    <td>
+                      {o.provider ? (
+                        <div>
+                          <div className="font-bold">{o.provider.firstName} {o.provider.lastName}</div>
+                          {o.changeBuddyRequested && (
+                            <span style={{
+                              display: 'inline-block',
+                              background: 'rgba(229,57,53,0.1)',
+                              color: '#E53935',
+                              fontSize: '0.72rem',
+                              padding: '2px 6px',
+                              borderRadius: '3px',
+                              fontWeight: 600,
+                              marginTop: '4px'
+                            }}>
+                              Change Requested
+                            </span>
+                          )}
+                        </div>
+                      ) : (
+                        <span style={{ color: 'var(--gray-400)', fontSize: '0.82rem' }}>Assigning...</span>
+                      )}
+                    </td>
                     <td>
                       <div>{o.date}</div>
                       <div style={{ fontSize: '0.78rem', color: 'var(--gray-400)' }}>{o.time}</div>
@@ -270,7 +322,7 @@ function DashOrders({ bookings, onStatusUpdate, onPaymentSuccess }) {
                             Cancel
                           </button>
                         )}
-                        {o.status === 'Active' && (
+                        {['Active', 'In-Progress'].includes(o.status) && (
                           <button
                             onClick={() => onStatusUpdate(o._id, 'Completed')}
                             style={{
@@ -284,6 +336,23 @@ function DashOrders({ bookings, onStatusUpdate, onPaymentSuccess }) {
                             }}
                           >
                             Complete
+                          </button>
+                        )}
+                        {canRequestChange(o) && (
+                          <button
+                            onClick={() => handleRequestChangeBuddy(o)}
+                            style={{
+                              background: 'rgba(229,57,53,0.05)',
+                              border: '1px dashed #E53935',
+                              color: '#E53935',
+                              padding: '4px 10px',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.74rem',
+                              fontWeight: 600
+                            }}
+                          >
+                            Change Buddy
                           </button>
                         )}
                         {!o.remainingPaid && (
@@ -352,6 +421,14 @@ function DashBook({ onBookingCreated }) {
       setLoading(true)
       const data = await api.getServices()
       setServices(data)
+      const params = new URLSearchParams(window.location.search)
+      const queryServiceId = params.get('service')
+      if (queryServiceId) {
+        const found = data.find(s => s._id === queryServiceId || s.serviceId === queryServiceId)
+        if (found) {
+          setSelectedService(found)
+        }
+      }
     } catch (err) {
       console.error(err)
     } finally {
@@ -676,14 +753,14 @@ function DashBook({ onBookingCreated }) {
 
 function DashPayments({ bookings, onPaymentSuccess }) {
   const totalInvested = bookings
-    .filter(b => ['Active', 'Completed'].includes(b.status))
+    .filter(b => ['Active', 'In-Progress', 'Completed'].includes(b.status))
     .reduce((sum, b) => sum + (b.totalCost || 0), 0)
 
   const totalDepositsPaid = bookings
     .reduce((sum, b) => sum + (b.depositPaid || (b.totalCost * 0.2)), 0)
 
   const outstandingDues = bookings
-    .filter(b => !b.remainingPaid && ['Pending', 'Active'].includes(b.status))
+    .filter(b => !b.remainingPaid && ['Pending', 'Active', 'In-Progress'].includes(b.status))
     .reduce((sum, b) => sum + ((b.totalCost || 0) * 0.8), 0)
 
   const [payingId, setPayingId] = useState(null)
@@ -890,7 +967,7 @@ function DashPayments({ bookings, onPaymentSuccess }) {
   )
 }
 
-function DashMessages() {
+function DashMessages({ onMessagesRead }) {
   const [threads, setThreads] = useState([])
   const [activeThread, setActiveThread] = useState(null)
   const [messages, setMessages] = useState([])
@@ -917,6 +994,7 @@ function DashMessages() {
     try {
       const chat = await api.getChatHistory(userId)
       setMessages(chat)
+      if (onMessagesRead) onMessagesRead()
     } catch (err) {
       console.error(err)
     }
@@ -998,7 +1076,10 @@ function DashMessages() {
                     <span className="convo-time">{new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                   </div>
                   <div className="convo-role" style={{ textTransform: 'capitalize' }}>{c.user?.role}</div>
-                  <div className="convo-last">{c.lastMessage}</div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2px' }}>
+                    <div className="convo-last" style={{ flex: 1 }}>{c.lastMessage}</div>
+                    {c.unreadCount > 0 && <span className="convo-badge">{c.unreadCount}</span>}
+                  </div>
                 </div>
               </div>
             ))}
@@ -1025,8 +1106,35 @@ function DashMessages() {
                   const isCurrentUser = m.sender._id.toString() !== activeThread.user._id.toString()
                   return (
                     <div key={m._id} className={`chat-msg ${isCurrentUser ? 'user' : 'bot'}`}>
-                      <div className="msg-bubble">
-                        {m.text}
+                      <div className="msg-bubble" style={{ 
+                        position: 'relative', 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        paddingBottom: '18px', 
+                        minWidth: '70px' 
+                      }}>
+                        <span style={{ wordBreak: 'break-word' }}>{m.text}</span>
+                        <div className="msg-meta" style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'flex-end',
+                          gap: '4px',
+                          fontSize: '0.68rem',
+                          opacity: 0.75,
+                          position: 'absolute',
+                          bottom: '2px',
+                          right: '10px',
+                          color: isCurrentUser ? 'rgba(255,255,255,0.8)' : 'var(--gray-500)'
+                        }}>
+                          <span>{new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          {isCurrentUser && (
+                            m.isRead ? (
+                              <CheckCheck size={12} style={{ color: '#90CAF9' }} />
+                            ) : (
+                              <Check size={12} style={{ color: 'rgba(255,255,255,0.6)' }} />
+                            )
+                          )}
+                        </div>
                       </div>
                     </div>
                   )
@@ -1059,11 +1167,20 @@ function DashPlaceholder({ title }) {
 }
 
 export default function UserDashboard() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const authenticated = api.isAuthenticated()
+
+  useEffect(() => {
+    if (!authenticated) {
+      navigate('/login', { state: { from: location.pathname + location.search } })
+    }
+  }, [authenticated, navigate, location.pathname, location.search])
+
   const [sideOpen, setSideOpen] = useState(false)
   const [bookings, setBookings] = useState([])
   const [loading, setLoading] = useState(true)
-  const navigate = useNavigate()
-  const location = useLocation()
+  const [unreadCount, setUnreadCount] = useState(0)
   
   const user = api.getUser()
 
@@ -1078,14 +1195,25 @@ export default function UserDashboard() {
     }
   }
 
-  useEffect(() => {
-    // Route guard
-    if (!api.isAuthenticated()) {
-      navigate('/login')
-      return
+  const loadUnreadCount = async () => {
+    try {
+      const res = await api.getUnreadCount()
+      setUnreadCount(res.count)
+    } catch (err) {
+      console.error(err)
     }
-    loadBookings()
-  }, [])
+  }
+
+  useEffect(() => {
+    if (authenticated) {
+      loadBookings()
+      loadUnreadCount()
+
+      // Poll for unread messages count every 10 seconds
+      const interval = setInterval(loadUnreadCount, 10000)
+      return () => clearInterval(interval)
+    }
+  }, [authenticated])
 
   const handleStatusUpdate = async (bookingId, status) => {
     try {
@@ -1099,6 +1227,10 @@ export default function UserDashboard() {
   const handleLogout = () => {
     api.logout()
     navigate('/')
+  }
+
+  if (!authenticated) {
+    return null
   }
 
   if (loading) {
@@ -1142,11 +1274,18 @@ export default function UserDashboard() {
         </div>
 
         <nav className="dash-nav">
-          {NAV.map(n => (
-            <Link key={n.path} to={n.path} className={`dash-nav-link ${location.pathname === n.path ? 'dash-nav-active' : ''}`}>
-              {n.icon} {n.label}
-            </Link>
-          ))}
+          {NAV.map(n => {
+            const isMessages = n.label === 'Messages'
+            return (
+              <Link key={n.path} to={n.path} className={`dash-nav-link ${location.pathname === n.path ? 'dash-nav-active' : ''}`}>
+                {n.icon}
+                <span>{n.label}</span>
+                {isMessages && unreadCount > 0 && (
+                  <span className="dash-badge">{unreadCount}</span>
+                )}
+              </Link>
+            )
+          })}
         </nav>
         
         <button onClick={handleLogout} className="dash-logout" style={{ background: 'none', border: 'none', textAlign: 'left', width: '100%', cursor: 'pointer' }}>
@@ -1159,7 +1298,7 @@ export default function UserDashboard() {
           <Route index element={<DashHome bookings={bookings} />} />
           <Route path="book" element={<DashBook onBookingCreated={loadBookings} />} />
           <Route path="orders" element={<DashOrders bookings={bookings} onStatusUpdate={handleStatusUpdate} onPaymentSuccess={loadBookings} />} />
-          <Route path="messages" element={<DashMessages />} />
+          <Route path="messages" element={<DashMessages onMessagesRead={loadUnreadCount} />} />
           <Route path="notifications" element={<DashPlaceholder title="Notifications"/>} />
           <Route path="payments" element={<DashPayments bookings={bookings} onPaymentSuccess={loadBookings} />} />
           <Route path="settings" element={<DashPlaceholder title="Settings"/>} />

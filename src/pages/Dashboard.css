@@ -45,6 +45,9 @@
 .status-active { background: #E8F5E9; color: #2E7D32; }
 .status-done { background: var(--gray-100); color: var(--gray-600); }
 .status-pending { background: #FFF8E1; color: #F57C00; }
+.status-in-progress { background: #E3F2FD; color: #1565C0; }
+.status-completed { background: #E8F5E9; color: #2E7D32; }
+.status-declined { background: #FFEBEE; color: #C62828; }
 
 .active-services { display: flex; flex-direction: column; gap: 12px; }
 .active-svc-row { display: flex; align-items: center; gap: 12px; padding: 12px; background: var(--gray-50); border-radius: var(--radius-md); }

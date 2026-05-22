@@ -12,10 +12,15 @@ const bookingSchema = new mongoose.Schema({
   totalCost: { type: Number, required: true },
   depositPaid: { type: Number, required: true },
   remainingPaid: { type: Boolean, default: false },
+  remainingPaymentMethod: { type: String, enum: ['cash', 'upi', ''], default: '' },
   razorpayPaymentId: { type: String, default: '' },
   remainingPaymentId: { type: String, default: '' },
-  status: { type: String, enum: ['Pending', 'Active', 'Completed', 'Declined'], default: 'Pending' },
+  status: { type: String, enum: ['Pending', 'Active', 'In-Progress', 'Completed', 'Declined'], default: 'Pending' },
+  changeBuddyRequested: { type: Boolean, default: false },
+  changeBuddyReason: { type: String, default: '' },
+  lastReassignedAt: { type: Date, default: null },
   createdAt: { type: Date, default: Date.now }
 })
 
 export default mongoose.model('Booking', bookingSchema)
+

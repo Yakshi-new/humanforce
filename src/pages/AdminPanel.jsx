@@ -1,12 +1,13 @@
 import { useState, useEffect } from 'react'
 import { Link, Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
-import { LayoutDashboard, Users, Briefcase, Grid, CreditCard, Settings, LogOut, Zap, UserCheck, BarChart2, AlertTriangle, Menu, X, Search, PlayCircle, CheckCircle, History, Mail } from 'lucide-react'
+import { LayoutDashboard, Users, Briefcase, Grid, CreditCard, Settings, LogOut, Zap, UserCheck, BarChart2, AlertTriangle, Menu, X, Search, PlayCircle, CheckCircle, History, Mail, MessageSquare } from 'lucide-react'
 import { api } from '../utils/api'
 import './Dashboard.css'
 
 const NAV = [
   { icon: <LayoutDashboard size={18}/>, label:'Dashboard', path:'/admin' },
   { icon: <Briefcase size={18}/>, label:'Requests', path:'/admin/requests' },
+  { icon: <MessageSquare size={18}/>, label:'Messages Trace', path:'/admin/messages-trace' },
   { icon: <Users size={18}/>, label:'Users', path:'/admin/users' },
   { icon: <UserCheck size={18}/>, label:'Providers', path:'/admin/providers' },
   { icon: <Briefcase size={18}/>, label:'Services', path:'/admin/services' },
@@ -61,8 +62,9 @@ function AdminHome() {
           { icon:<UserCheck size={22}/>, label:'Active Providers', value: stats.totalProviders || 0, trend:'Marketplace roster', color:'#43A047' },
           { icon:<PlayCircle size={22}/>, label:'Running Operations', value: stats.runningOperations || 0, trend:'In-progress bookings', color:'#FF9800' },
           { icon:<CheckCircle size={22}/>, label:'Complete Operations', value: stats.completedOperations || 0, trend:'Successfully finished', color:'#00ACC1' },
+          { icon:<AlertTriangle size={22}/>, label:'Buddy Requests', value: stats.changeBuddyRequestsCount || 0, trend:'Pending buddy changes', color:'#E53935' },
           { icon:<CreditCard size={22}/>, label:'Total Escrow Volume', value: `₹${(stats.revenue || 0).toLocaleString('en-IN')}`, trend:'Net booking value', color:'#8E24AA' },
-          { icon:<CreditCard size={22}/>, label:'Platform Commission', value: `₹${(stats.platformCommission || 0).toLocaleString('en-IN')}`, trend:'20% deposit escrow cut', color:'#E53935' },
+          { icon:<CreditCard size={22}/>, label:'Platform Commission', value: `₹${(stats.platformCommission || 0).toLocaleString('en-IN')}`, trend:'20% deposit escrow cut', color:'#43A047' },
         ].map((w,i) => (
           <div key={i} className="widget-card">
             <div className="widget-icon" style={{background:`${w.color}15`,color:w.color}}>{w.icon}</div>
@@ -274,6 +276,259 @@ function UserTable({ title, fetchFn, cols, mapRow }) {
   )
 }
 
+function AdminBuddyRequests() {
+  const [bookings, setBookings] = useState([])
+  const [providers, setProviders] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [assigningId, setAssigningId] = useState(null)
+  const [selectedProvider, setSelectedProvider] = useState({})
+
+  const loadData = async () => {
+    try {
+      const bData = await api.getBookings()
+      const pData = await api.getAdminProviders()
+      const requests = bData.filter(b => b.changeBuddyRequested === true)
+      setBookings(requests)
+      setProviders(pData)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const handleReassign = async (bookingId) => {
+    const providerId = selectedProvider[bookingId]
+    if (!providerId) {
+      alert('Please select a buddy to assign.')
+      return
+    }
+    setAssigningId(bookingId)
+    try {
+      await api.reassignBuddy(bookingId, providerId)
+      alert('Buddy reassigned successfully!')
+      loadData()
+    } catch (err) {
+      console.error(err)
+      alert('Failed to reassign buddy: ' + err.message)
+    } finally {
+      setAssigningId(null)
+    }
+  }
+
+  if (loading) return <div className="dash-loading">Loading buddy requests...</div>
+
+  return (
+    <div className="dash-content">
+      <h2 className="dash-page-title">Buddy Change Requests</h2>
+      <div className="dash-card">
+        <div className="orders-table-wrap">
+          {bookings.length === 0 ? (
+            <p style={{ padding: '40px', textAlign: 'center', color: 'var(--gray-500)' }}>No pending buddy change requests.</p>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Booking ID</th>
+                  <th>Customer</th>
+                  <th>Original Buddy</th>
+                  <th>Reason for Request</th>
+                  <th>Select New Buddy</th>
+                  <th>Action</th>
+                </tr>
+              </thead>
+              <tbody>
+                {bookings.map(b => (
+                  <tr key={b._id}>
+                    <td className="mono">{b.bookingId}</td>
+                    <td>
+                      <div><strong>{b.client?.firstName} {b.client?.lastName}</strong></div>
+                      <div style={{ fontSize: '0.78rem', color: 'var(--gray-400)' }}>{b.client?.email}</div>
+                    </td>
+                    <td>
+                      {b.provider ? (
+                        <div>
+                          <div><strong>{b.provider.firstName} {b.provider.lastName}</strong></div>
+                          <div style={{ fontSize: '0.78rem', color: 'var(--gray-400)' }}>Rating: {b.provider.rating}⭐</div>
+                        </div>
+                      ) : (
+                        'Unassigned'
+                      )}
+                    </td>
+                    <td>
+                      <div style={{
+                        maxWidth: '250px',
+                        whiteSpace: 'normal',
+                        wordBreak: 'break-word',
+                        color: '#E53935',
+                        fontWeight: 500,
+                        fontSize: '0.85rem'
+                      }}>
+                        {b.changeBuddyReason || 'No reason provided'}
+                      </div>
+                    </td>
+                    <td>
+                      <select
+                        value={selectedProvider[b._id] || ''}
+                        onChange={(e) => setSelectedProvider({ ...selectedProvider, [b._id]: e.target.value })}
+                        className="form-input"
+                        style={{ padding: '4px 8px', fontSize: '0.85rem', width: '200px' }}
+                      >
+                        <option value="">-- Choose Active Buddy --</option>
+                        {providers
+                          .filter(p => !b.provider || p._id !== b.provider._id)
+                          .map(p => (
+                            <option key={p._id} value={p._id}>
+                              {p.firstName} {p.lastName} ({p.skills?.slice(0,2).join(', ')})
+                            </option>
+                          ))}
+                      </select>
+                    </td>
+                    <td>
+                      <button
+                        onClick={() => handleReassign(b._id)}
+                        disabled={assigningId === b._id}
+                        className="btn-primary"
+                        style={{
+                          padding: '6px 12px',
+                          fontSize: '0.8rem',
+                          background: '#E53935',
+                          borderRadius: '4px',
+                          cursor: 'pointer'
+                        }}
+                      >
+                        {assigningId === b._id ? 'Reassigning...' : 'Reassign Buddy'}
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function AdminMessagesTrace() {
+  const [messages, setMessages] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [search, setSearch] = useState('')
+
+  const loadData = async () => {
+    try {
+      const data = await api.getAdminMessages()
+      setMessages(data)
+    } catch (err) {
+      console.error(err)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => {
+    loadData()
+  }, [])
+
+  const filteredMessages = messages.filter(m => {
+    const senderName = `${m.sender?.firstName || ''} ${m.sender?.lastName || ''}`.toLowerCase()
+    const receiverName = `${m.receiver?.firstName || ''} ${m.receiver?.lastName || ''}`.toLowerCase()
+    const text = (m.text || '').toLowerCase()
+    const query = search.toLowerCase()
+    return senderName.includes(query) || receiverName.includes(query) || text.includes(query)
+  })
+
+  if (loading) return <div className="dash-loading">Loading message tracing logs...</div>
+
+  return (
+    <div className="dash-content">
+      <div className="dash-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+        <h2 className="dash-page-title" style={{ margin: 0 }}>Chat Message Audit Logs</h2>
+        <div className="search-box" style={{ width: '300px' }}>
+          <Search size={16} />
+          <input
+            type="text"
+            placeholder="Search by sender, receiver, text..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="form-input search-input"
+          />
+        </div>
+      </div>
+
+      <div className="dash-card">
+        <div className="orders-table-wrap">
+          {filteredMessages.length === 0 ? (
+            <p style={{ padding: '40px', textAlign: 'center', color: 'var(--gray-500)' }}>No message logs found matching search.</p>
+          ) : (
+            <table className="data-table">
+              <thead>
+                <tr>
+                  <th>Timestamp</th>
+                  <th>Sender</th>
+                  <th>Receiver</th>
+                  <th>Message Content</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredMessages.map(m => (
+                  <tr key={m._id}>
+                    <td style={{ fontSize: '0.8rem', color: 'var(--gray-400)' }}>
+                      {new Date(m.createdAt).toLocaleString()}
+                    </td>
+                    <td>
+                      <div><strong>{m.sender?.firstName} {m.sender?.lastName}</strong></div>
+                      <div style={{
+                        display: 'inline-block',
+                        fontSize: '0.65rem',
+                        padding: '1px 4px',
+                        background: m.sender?.role === 'customer' ? 'rgba(30,136,229,0.1)' : 'rgba(67,160,71,0.1)',
+                        color: m.sender?.role === 'customer' ? '#1E88E5' : '#43A047',
+                        borderRadius: '3px',
+                        fontWeight: 600
+                      }}>
+                        {m.sender?.role}
+                      </div>
+                    </td>
+                    <td>
+                      <div><strong>{m.receiver?.firstName} {m.receiver?.lastName}</strong></div>
+                      <div style={{
+                        display: 'inline-block',
+                        fontSize: '0.65rem',
+                        padding: '1px 4px',
+                        background: m.receiver?.role === 'customer' ? 'rgba(30,136,229,0.1)' : 'rgba(67,160,71,0.1)',
+                        color: m.receiver?.role === 'customer' ? '#1E88E5' : '#43A047',
+                        borderRadius: '3px',
+                        fontWeight: 600
+                      }}>
+                        {m.receiver?.role}
+                      </div>
+                    </td>
+                    <td style={{
+                      whiteSpace: 'normal',
+                      wordBreak: 'break-word',
+                      fontSize: '0.9rem',
+                      color: 'var(--gray-700)',
+                      maxWidth: '400px'
+                    }}>
+                      {m.text}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function AdminRequests() {
   const [bookings, setBookings] = useState([])
   const [providers, setProviders] = useState([])
@@ -312,6 +567,17 @@ function AdminRequests() {
       await loadData()
     } catch (err) {
       console.error(err)
+    }
+  }
+
+  const handleBuddyReassign = async (bookingId, providerId) => {
+    if (!providerId) return
+    try {
+      await api.reassignBuddy(bookingId, providerId)
+      await loadData()
+    } catch (err) {
+      console.error(err)
+      alert('Failed to reassign buddy: ' + err.message)
     }
   }
 
@@ -391,6 +657,51 @@ function AdminRequests() {
                     <div style={{ fontSize: '0.75rem', color: '#43A047' }}>Deposit: ₹{b.depositPaid?.toLocaleString('en-IN')}</div>
                   </td>
                   <td>
+                    {/* Buddy-change request alert box shown above the dropdown */}
+                    {b.changeBuddyRequested && (
+                      <div style={{
+                        marginBottom: '8px',
+                        padding: '8px 10px',
+                        borderRadius: '8px',
+                        background: 'rgba(229,57,53,0.08)',
+                        border: '1px solid rgba(229,57,53,0.35)',
+                        fontSize: '0.75rem',
+                        color: '#E53935'
+                      }}>
+                        <div style={{ fontWeight: 700, marginBottom: '3px', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                          <AlertTriangle size={12} /> Change Requested
+                        </div>
+                        <div style={{ color: 'rgba(229,57,53,0.85)', marginBottom: '6px', fontStyle: 'italic' }}>
+                          "{b.changeBuddyReason || 'No reason given'}"
+                        </div>
+                        <div style={{ display: 'flex', gap: '4px', alignItems: 'center' }}>
+                          <select
+                            defaultValue=""
+                            onChange={(e) => handleBuddyReassign(b._id, e.target.value)}
+                            style={{
+                              flex: 1,
+                              padding: '3px 6px',
+                              fontSize: '0.73rem',
+                              background: '#1a1a2e',
+                              color: 'white',
+                              border: '1px solid rgba(229,57,53,0.4)',
+                              borderRadius: '4px',
+                              cursor: 'pointer'
+                            }}
+                          >
+                            <option value="">Pick new buddy...</option>
+                            {providers
+                              .filter(p => !b.provider || p._id !== b.provider?._id)
+                              .map(p => (
+                                <option key={p._id} value={p._id}>
+                                  {p.firstName} {p.lastName}
+                                </option>
+                              ))}
+                          </select>
+                        </div>
+                      </div>
+                    )}
+                    {/* Normal assigned buddy dropdown */}
                     <select 
                       value={b.provider?._id || ''} 
                       onChange={(e) => handleProviderAssign(b._id, e.target.value)}
@@ -452,7 +763,7 @@ function AdminRequests() {
                           </button>
                         </>
                       )}
-                      {b.status === 'Active' && (
+                      {['Active', 'In-Progress'].includes(b.status) && (
                         <button
                           onClick={() => handleStatusUpdate(b._id, 'Completed')}
                           style={{
@@ -946,20 +1257,41 @@ function AdminLogs() {
 }
 
 export default function AdminPanel() {
-  const [sideOpen, setSideOpen] = useState(false)
   const navigate = useNavigate()
   const location = useLocation()
+  const authenticated = api.isAuthenticated() && api.getUser()?.role === 'admin'
 
   useEffect(() => {
-    // Route guard
-    if (!api.isAuthenticated() || api.getUser()?.role !== 'admin') {
-      navigate('/login')
+    if (!authenticated) {
+      navigate('/login', { state: { from: location.pathname + location.search } })
     }
-  }, [])
+  }, [authenticated, navigate, location.pathname, location.search])
+
+  const [sideOpen, setSideOpen] = useState(false)
+  const [stats, setStats] = useState(null)
+
+  const loadStats = async () => {
+    try {
+      const data = await api.getAdminStats()
+      setStats(data)
+    } catch (err) {
+      console.error(err)
+    }
+  }
+
+  useEffect(() => {
+    if (authenticated) {
+      loadStats()
+    }
+  }, [authenticated])
 
   const handleLogout = () => {
     api.logout()
     navigate('/')
+  }
+
+  if (!authenticated) {
+    return null
   }
 
   const getInitials = () => {
@@ -998,7 +1330,20 @@ export default function AdminPanel() {
         <nav className="dash-nav">
           {NAV.map(n => (
             <Link key={n.path} to={n.path} className={`dash-nav-link ${location.pathname === n.path ? 'dash-nav-active' : ''}`}>
-              {n.icon} {n.label}
+              {n.icon} <span>{n.label}</span>
+              {n.badge && stats && stats[n.badge] > 0 && (
+                <span className="badge" style={{
+                  background: '#E53935',
+                  color: 'white',
+                  borderRadius: '10px',
+                  padding: '1px 6px',
+                  fontSize: '0.68rem',
+                  fontWeight: 700,
+                  marginLeft: 'auto'
+                }}>
+                  {stats[n.badge]}
+                </span>
+              )}
             </Link>
           ))}
         </nav>
@@ -1012,6 +1357,8 @@ export default function AdminPanel() {
         <Routes>
           <Route index element={<AdminHome/>}/>
           <Route path="requests" element={<AdminRequests/>}/>
+          <Route path="buddy-requests" element={<AdminRequests/>}/>
+          <Route path="messages-trace" element={<AdminMessagesTrace/>}/>
           
           <Route 
             path="users" 
@@ -1117,7 +1464,7 @@ export default function AdminPanel() {
                   ),
                   r.date, 
                   r.method, 
-                  <span className={`status-pill status-${r.status === 'Paid' || r.status === 'Active' || r.status === 'Completed' ? 'active' : r.status === 'Declined' ? 'done' : 'pending'}`}>{r.status}</span>
+                  <span className={`status-pill status-${r.status === 'In-Progress' ? 'in-progress' : (r.status === 'Paid' || r.status === 'Active' || r.status === 'Completed' ? 'active' : r.status === 'Declined' ? 'done' : 'pending')}`}>{r.status}</span>
                 ]}
               />
             }
