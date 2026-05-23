@@ -1,0 +1,352 @@
+/* ── Provider Register Page Overrides ── */
+
+/* Left panel — distinct gradient for provider */
+.provider-reg-left {
+  background: linear-gradient(145deg, #1a0533 0%, #2d1060 40%, #4c1d95 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.provider-reg-left::before {
+  content: '';
+  position: absolute;
+  top: -80px;
+  right: -80px;
+  width: 320px;
+  height: 320px;
+  border-radius: 50%;
+  background: rgba(139, 92, 246, 0.2);
+  pointer-events: none;
+}
+
+.provider-reg-left::after {
+  content: '';
+  position: absolute;
+  bottom: -60px;
+  left: -60px;
+  width: 240px;
+  height: 240px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.15);
+  pointer-events: none;
+}
+
+/* Badge */
+.provider-reg-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  background: rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 20px;
+  padding: 5px 14px;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.9);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  margin-bottom: 24px;
+}
+
+/* Perks list */
+.provider-perks {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  margin-bottom: 36px;
+}
+
+.provider-perk {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.perk-icon {
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #c4b5fd;
+  flex-shrink: 0;
+}
+
+.perk-title {
+  font-size: 0.9rem;
+  font-weight: 700;
+  color: white;
+  margin: 0 0 2px;
+}
+
+.perk-desc {
+  font-size: 0.8rem;
+  color: rgba(255, 255, 255, 0.65);
+  margin: 0;
+}
+
+/* Stats row */
+.provider-stats {
+  display: flex;
+  gap: 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  padding-top: 24px;
+  margin-top: 4px;
+}
+
+.pstat {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 3px;
+  border-right: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.pstat:last-child {
+  border-right: none;
+}
+
+.pstat-val {
+  font-size: 1.3rem;
+  font-weight: 800;
+  color: white;
+}
+
+.pstat-lbl {
+  font-size: 0.72rem;
+  color: rgba(255, 255, 255, 0.55);
+  text-align: center;
+}
+
+/* Right panel header */
+.provider-reg-header {
+  margin-bottom: 4px;
+}
+
+.provider-step-label {
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--primary, #6366f1);
+  margin-bottom: 20px;
+}
+
+/* Experience level grid */
+.experience-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.exp-card {
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-md, 10px);
+  padding: 12px 14px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: white;
+}
+
+.exp-card:hover {
+  border-color: var(--primary-light, #818cf8);
+}
+
+.exp-card.selected {
+  border-color: var(--primary, #6366f1);
+  background: var(--primary-bg, #eef2ff);
+}
+
+.exp-label {
+  font-size: 0.88rem;
+  font-weight: 700;
+  color: var(--gray-800);
+  margin: 0 0 2px;
+}
+
+.exp-desc {
+  font-size: 0.76rem;
+  color: var(--gray-500);
+  margin: 0;
+}
+
+/* Skills picker enhancements */
+.skills-count {
+  float: right;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--primary);
+  background: var(--primary-bg, #eef2ff);
+  padding: 2px 8px;
+  border-radius: 20px;
+}
+
+.skills-hint {
+  font-size: 0.8rem;
+  color: var(--gray-400);
+  margin-bottom: 12px;
+}
+
+.provider-skills-picker {
+  max-height: 220px;
+  overflow-y: auto;
+  padding-right: 4px;
+  scrollbar-width: thin;
+}
+
+/* Provider verification intro */
+.provider-verify-intro {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: linear-gradient(135deg, #eef2ff, #f5f3ff);
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.verify-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.provider-verify-intro p {
+  font-size: 0.85rem;
+  color: var(--gray-600);
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* Agreement */
+.provider-agreement {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  font-size: 0.82rem;
+  color: var(--gray-600);
+  background: var(--gray-50);
+  border-radius: 8px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  line-height: 1.6;
+}
+
+/* Upload zone */
+.upload-zone {
+  border: 2px dashed var(--gray-300);
+  border-radius: var(--radius-md);
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  background: var(--gray-50);
+}
+
+.upload-zone:hover {
+  border-color: var(--primary);
+}
+
+.upload-zone span { font-size: 1.5rem; display: block; margin-bottom: 8px; }
+.upload-zone p { margin: 4px 0; color: var(--gray-500); font-size: 0.875rem; }
+
+/* Responsive */
+@media (max-width: 640px) {
+  .experience-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Provider Service Picker Grid (Step 2) ── */
+.provider-service-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  max-height: 340px;
+  overflow-y: auto;
+  padding: 4px 2px 8px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--primary) transparent;
+}
+
+.provider-service-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 14px 8px 10px;
+  border-radius: 12px;
+  border: 2px solid var(--gray-200, #e5e7eb);
+  background: white;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  text-align: center;
+  min-height: 90px;
+  font-family: inherit;
+}
+
+.provider-service-card:hover {
+  border-color: var(--svc-color, #6366f1);
+  background: color-mix(in srgb, var(--svc-color, #6366f1) 6%, white);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 14px rgba(0, 0, 0, 0.08);
+}
+
+.provider-service-card.picked {
+  border-color: var(--svc-color, #6366f1);
+  background: color-mix(in srgb, var(--svc-color, #6366f1) 10%, white);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--svc-color, #6366f1) 20%, transparent);
+}
+
+.svc-emoji {
+  font-size: 1.5rem;
+  line-height: 1;
+  display: block;
+}
+
+.svc-name {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--gray-800, #1f2937);
+  line-height: 1.2;
+}
+
+.svc-cat {
+  font-size: 0.65rem;
+  font-weight: 500;
+  color: var(--svc-color, #6366f1);
+  background: color-mix(in srgb, var(--svc-color, #6366f1) 12%, white);
+  padding: 1px 6px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.svc-check {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  color: var(--svc-color, #6366f1);
+  display: flex;
+  align-items: center;
+}
+
+@media (max-width: 480px) {
+  .provider-service-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+

@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { generateAvatarUrl } from '../utils/avatarHelper.js'
 
 const userSchema = new mongoose.Schema({
   firstName: { type: String, required: true },
@@ -21,10 +22,10 @@ const userSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 })
 
+// Auto-generate a role-aware avatar if none is set
 userSchema.pre('save', function (next) {
   if (!this.avatar) {
-    const seed = encodeURIComponent(`${this.firstName}_${this.lastName}_${Date.now()}`)
-    this.avatar = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`
+    this.avatar = generateAvatarUrl(this.firstName, this.lastName, this.role)
   }
   next()
 })

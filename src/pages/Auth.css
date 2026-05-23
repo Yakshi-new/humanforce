@@ -88,3 +88,70 @@
   .role-cards { grid-template-columns: 1fr; }
   .form-row { grid-template-columns: 1fr; }
 }
+
+/* ── Already Registered Banner ── */
+.already-registered-banner {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: #fffbeb;
+  border: 1.5px solid #f59e0b;
+  border-radius: 12px;
+  padding: 16px 18px;
+  margin-bottom: 20px;
+  animation: slideDownFade 0.3s ease;
+}
+
+@keyframes slideDownFade {
+  from { opacity: 0; transform: translateY(-8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.already-registered-icon {
+  font-size: 1.4rem;
+  flex-shrink: 0;
+  line-height: 1;
+  margin-top: 1px;
+}
+
+.already-registered-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.already-registered-title {
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #92400e;
+  margin: 0;
+}
+
+.already-registered-msg {
+  font-size: 0.84rem;
+  color: #78350f;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.already-registered-btn {
+  display: inline-block;
+  margin-top: 8px;
+  font-size: 0.84rem;
+  font-weight: 700;
+  color: #d97706;
+  border: 1.5px solid #f59e0b;
+  border-radius: 8px;
+  padding: 6px 14px;
+  background: white;
+  transition: background 0.18s, color 0.18s;
+  text-decoration: none;
+  width: fit-content;
+}
+
+.already-registered-btn:hover {
+  background: #f59e0b;
+  color: white;
+  border-color: #f59e0b;
+}
+

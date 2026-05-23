@@ -358,6 +358,15 @@ export const api = {
       headers: getHeaders()
     })
     return handleResponse(res)
+  },
+
+  subscribeNewsletter: async (email) => {
+    const res = await customFetch('/api/subscribe', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email })
+    })
+    return handleResponse(res)
   }
 }
 

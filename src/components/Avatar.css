@@ -1,0 +1,74 @@
+/* ─── Base ─────────────────────────────────────────────────────────────── */
+.hf-avatar {
+  position: relative;
+  border-radius: 50%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  overflow: visible; /* allow dot to overflow */
+  font-weight: 700;
+  letter-spacing: -0.5px;
+  line-height: 1;
+  user-select: none;
+}
+
+/* ─── Image ─────────────────────────────────────────────────────────────── */
+.hf-avatar__img {
+  width: 100%;
+  height: 100%;
+  border-radius: 50%;
+  object-fit: cover;
+  display: block;
+}
+
+/* ─── Initials fallback ─────────────────────────────────────────────────── */
+.hf-avatar__initials {
+  border-radius: 50%;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+/* Role-specific gradient backgrounds for initials */
+.hf-avatar--customer .hf-avatar__initials {
+  background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
+}
+
+.hf-avatar--provider .hf-avatar__initials {
+  background: linear-gradient(135deg, #0ea5e9 0%, #6366f1 100%);
+}
+
+.hf-avatar--admin .hf-avatar__initials {
+  background: linear-gradient(135deg, #1e1b4b 0%, #4338ca 100%);
+}
+
+/* ─── Role dot badge ────────────────────────────────────────────────────── */
+.hf-avatar__dot {
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 22%;
+  height: 22%;
+  min-width: 8px;
+  min-height: 8px;
+  border-radius: 50%;
+  border: 2px solid white;
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.08);
+}
+
+.hf-avatar__dot--customer {
+  background: #6366f1;
+}
+
+.hf-avatar__dot--provider {
+  background: #10b981;
+}
+
+.hf-avatar__dot--admin {
+  background: #f59e0b;
+}

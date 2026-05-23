@@ -19,6 +19,7 @@ import Blog from './pages/Blog'
 import BlogDetail from './pages/BlogDetail'
 import Login from './pages/Login'
 import Register from './pages/Register'
+import ProviderRegister from './pages/ProviderRegister'
 import UserDashboard from './pages/UserDashboard'
 import ProviderDashboard from './pages/ProviderDashboard'
 import AdminPanel from './pages/AdminPanel'
@@ -194,6 +195,7 @@ function Layout() {
         <Route path="/blog/:id"     element={<BlogDetail />} />
         <Route path="/login"        element={<Login />} />
         <Route path="/register"     element={<Register />} />
+        <Route path="/register/provider" element={<ProviderRegister />} />
         <Route path="/dashboard/*"  element={<UserDashboard />} />
         <Route path="/provider/*"   element={<ProviderDashboard />} />
         <Route path="/admin/*"      element={<AdminPanel />} />

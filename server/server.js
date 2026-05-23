@@ -18,7 +18,9 @@ import bookingRoutes from './routes/bookingRoutes.js'
 import messageRoutes from './routes/messageRoutes.js'
 import adminRoutes from './routes/adminRoutes.js'
 import enquiryRoutes from './routes/enquiryRoutes.js'
+import subscriberRoutes from './routes/subscriberRoutes.js'
 import { startAutoReassignJob } from './jobs/autoReassignProvider.js'
+import { generateAvatarUrl } from './utils/avatarHelper.js'
 
 dotenv.config()
 
@@ -36,6 +38,7 @@ app.use('/api/bookings', bookingRoutes)
 app.use('/api/messages', messageRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/enquiries', enquiryRoutes)
+app.use('/api/subscribe', subscriberRoutes)
 
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {
@@ -59,7 +62,8 @@ const seedAccounts = async () => {
         phone: '+919999911111',
         password: hashedPassword,
         role: 'admin',
-        status: 'Active'
+        status: 'Active',
+        avatar: generateAvatarUrl('Super', 'Admin', 'admin')
       })
       console.log('Admin seeded: admin@nomail.com / HumanForce@123')
     }
@@ -83,7 +87,8 @@ const seedAccounts = async () => {
         status: 'Active',
         rating: 4.9,
         reviewsCount: 214,
-        idType: 'Passport'
+        idType: 'Passport',
+        avatar: generateAvatarUrl('Ana', 'Kowalski', 'provider')
       })
     }
 
@@ -106,7 +111,8 @@ const seedAccounts = async () => {
         status: 'Active',
         rating: 4.8,
         reviewsCount: 184,
-        idType: 'Driver\'s License'
+        idType: 'Driver\'s License',
+        avatar: generateAvatarUrl('Marcus', 'Reyes', 'provider')
       })
     }
 

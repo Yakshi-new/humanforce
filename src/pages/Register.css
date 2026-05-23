@@ -8,3 +8,29 @@
 .upload-zone p { font-size: 0.88rem; color: var(--gray-600); }
 .verify-note { display: flex; align-items: center; gap: 8px; background: var(--gray-50); border-radius: var(--radius-md); padding: 12px 16px; font-size: 0.82rem; color: var(--gray-600); margin-bottom: 16px; }
 .verify-note svg { color: var(--success); flex-shrink: 0; }
+
+/* Provider hint block on the Register left panel */
+.register-provider-hint {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-top: 36px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 12px;
+  padding: 16px 18px;
+  font-size: 1.2rem;
+}
+
+.register-provider-link {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.75);
+  transition: color 0.2s;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+.register-provider-link:hover {
+  color: white;
+}

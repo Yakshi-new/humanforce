@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Link, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { LayoutDashboard, ShoppingBag, MessageSquare, Bell, CreditCard, Settings, LogOut, Zap, Clock, Star, ArrowRight, Menu, X, Send, Calendar, Shield, CheckCircle, Search, Check, CheckCheck } from 'lucide-react'
 import { api, loadRazorpayScript } from '../utils/api'
+import Avatar from '../components/Avatar'
 import './Dashboard.css'
 
 const NAV = [
@@ -1075,12 +1076,13 @@ function DashMessages({ onMessagesRead }) {
                 className={`convo-item ${activeThread?.user?._id === c.user?._id ? 'convo-active' : ''}`} 
                 onClick={() => setActiveThread(c)}
               >
-                <div className="convo-avatar" style={{ background: '#E53935', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                  {c.user?.avatar ? (
-                    <img src={c.user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    c.user?.firstName?.[0] || 'B'
-                  )}
+                <div className="convo-avatar" style={{ overflow: 'hidden' }}>
+                  <Avatar
+                    src={c.user?.avatar}
+                    name={`${c.user?.firstName || ''} ${c.user?.lastName || ''}`}
+                    role={c.user?.role || 'customer'}
+                    size={42}
+                  />
                 </div>
                 <div className="convo-info">
                   <div className="convo-name-row">
@@ -1100,12 +1102,13 @@ function DashMessages({ onMessagesRead }) {
           {activeThread && (
             <div className="chat-panel">
               <div className="chat-panel-header">
-                <div className="convo-avatar" style={{ background: '#E53935', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-                  {activeThread.user?.avatar ? (
-                    <img src={activeThread.user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                  ) : (
-                    activeThread.user?.firstName?.[0] || 'B'
-                  )}
+                <div className="convo-avatar" style={{ overflow: 'hidden' }}>
+                  <Avatar
+                    src={activeThread.user?.avatar}
+                    name={`${activeThread.user?.firstName || ''} ${activeThread.user?.lastName || ''}`}
+                    role={activeThread.user?.role || 'provider'}
+                    size={42}
+                  />
                 </div>
                 <div>
                   <div className="font-bold">{activeThread.user?.firstName} {activeThread.user?.lastName}</div>
@@ -1253,11 +1256,6 @@ export default function UserDashboard() {
     )
   }
 
-  const getInitials = () => {
-    if (!user) return 'HF'
-    return `${(user.firstName || '')[0] || ''}${(user.lastName || '')[0] || ''}`.toUpperCase()
-  }
-
   return (
     <div className="dashboard-layout">
       <button className="dash-mobile-toggle" onClick={()=>setSideOpen(!sideOpen)}><Menu size={20}/></button>
@@ -1272,13 +1270,12 @@ export default function UserDashboard() {
         </div>
         
         <div className="dash-user-card">
-          <div className="dash-user-avatar" style={{ background: '#E53935', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', overflow: 'hidden' }}>
-            {user?.avatar ? (
-              <img src={user.avatar} alt="Avatar" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-            ) : (
-              getInitials()
-            )}
-          </div>
+          <Avatar
+            src={user?.avatar}
+            name={user ? `${user.firstName} ${user.lastName}` : ''}
+            role={user?.role || 'customer'}
+            size={52}
+          />
           <div>
             <div className="dash-user-name">{user ? `${user.firstName} ${user.lastName}` : 'Guest User'}</div>
             <div className="dash-user-role" style={{ textTransform: 'capitalize' }}>{user ? `${user.role} Portal` : 'Customer'}</div>

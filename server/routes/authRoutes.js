@@ -4,6 +4,7 @@ import bcrypt from 'bcryptjs'
 import User from '../models/User.js'
 import ActivityLog from '../models/ActivityLog.js'
 import { protect } from '../middleware/auth.js'
+import { generateAvatarUrl } from '../utils/avatarHelper.js'
 
 const router = express.Router()
 
@@ -42,15 +43,20 @@ router.post('/register', async (req, res) => {
     const userExists = await User.findOne({ email })
 
     if (userExists) {
-      return res.status(400).json({ message: 'User already exists with this email' })
+      const roleLabel = userExists.role === 'provider' ? 'Provider' : userExists.role === 'admin' ? 'Admin' : 'User'
+      return res.status(409).json({
+        message: `This email is already registered as a ${roleLabel}. Please sign in instead.`,
+        code: 'ALREADY_REGISTERED',
+        existingRole: userExists.role
+      })
     }
 
     // Hash password
     const salt = await bcrypt.genSalt(10)
     const hashedPassword = await bcrypt.hash(password, salt)
 
-    const seed = encodeURIComponent(`${firstName}_${lastName}_${Date.now()}`)
-    const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${seed}`
+    // Generate role-specific professional avatar
+    const avatarUrl = generateAvatarUrl(firstName, lastName, role || 'customer')
 
     const user = await User.create({
       firstName,
@@ -137,10 +143,10 @@ router.post('/login', async (req, res) => {
       if (!user) {
         const salt = await bcrypt.genSalt(10)
         const hashedPassword = await bcrypt.hash('google_oauth_dummy_pass', salt)
-        const googleSeed = encodeURIComponent(email)
-        const avatarUrl = `https://api.dicebear.com/7.x/avataaars/svg?seed=${googleSeed}`
+        const googleFirstName = email.split('@')[0]
+        const avatarUrl = generateAvatarUrl(googleFirstName, 'User', 'customer')
         user = await User.create({
-          firstName: email.split('@')[0],
+          firstName: googleFirstName,
           lastName: 'Google User',
           email,
           phone: '+919999999999',
