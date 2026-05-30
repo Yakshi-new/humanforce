@@ -42,10 +42,10 @@ export default function Contact() {
             <p style={{marginTop:'12px',marginBottom:'32px'}}>We'd love to hear from you. Choose the best way to reach us or fill in the form.</p>
             <div className="contact-details">
               {[
-                { icon:<Mail size={20}/>, label:'Email', value:'hello@humanforce.ai', href:'mailto:hello@humanforce.ai' },
-                { icon:<Phone size={20}/>, label:'Phone', value:'+1 (800) 123-4567', href:'tel:+18001234567' },
-                { icon:<MapPin size={20}/>, label:'Office', value:'123 Market St, San Francisco, CA 94102', href:'#' },
-                { icon:<Clock size={20}/>, label:'Hours', value:'Mon–Fri: 9AM–6PM PST', href:null },
+                { icon:<Mail size={20}/>, label:'Email', value:'yakshi539@gmail.com', href:'mailto:yakshi539@gmail.com' },
+                { icon:<Phone size={20}/>, label:'Phone', value:'+919644464981', href:'tel:+919644464981' },
+                { icon:<MapPin size={20}/>, label:'Office', value:'Dewas Madhya Pradesh,455001', href:'#' },
+                { icon:<Clock size={20}/>, label:'Hours', value:'Mon–Sat: 10AM–7PM IST', href:null },
               ].map((d,i) => (
                 <div key={i} className="contact-detail">
                   <div className="contact-detail-icon">{d.icon}</div>

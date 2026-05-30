@@ -19,6 +19,7 @@ import messageRoutes from './routes/messageRoutes.js'
 import adminRoutes from './routes/adminRoutes.js'
 import enquiryRoutes from './routes/enquiryRoutes.js'
 import subscriberRoutes from './routes/subscriberRoutes.js'
+import whatsappRoutes from './routes/whatsappRoutes.js'
 import { startAutoReassignJob } from './jobs/autoReassignProvider.js'
 import { generateAvatarUrl } from './utils/avatarHelper.js'
 
@@ -29,7 +30,7 @@ const PORT = process.env.PORT || 5000
 
 // Middlewares
 app.use(cors())
-app.use(express.json())
+app.use(express.json({ limit: '10mb' }))  // 10mb to handle large OpenWA webhook payloads
 
 // API Route Registration
 app.use('/api/auth', authRoutes)
@@ -39,6 +40,7 @@ app.use('/api/messages', messageRoutes)
 app.use('/api/admin', adminRoutes)
 app.use('/api/enquiries', enquiryRoutes)
 app.use('/api/subscribe', subscriberRoutes)
+app.use('/api/whatsapp', whatsappRoutes)
 
 // Health Check Endpoint
 app.get('/api/health', (req, res) => {
@@ -138,9 +140,11 @@ mongoose
     // Start background jobs
     startAutoReassignJob()
 
-    // Start Server
-    app.listen(PORT, () => {
-      console.log(`Express server running on http://localhost:${PORT}`)
+    // Start Server — bind to 0.0.0.0 so Cloudflare tunnel can reach it
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`\n🚀 Express server running on http://0.0.0.0:${PORT}`)
+      console.log(`📲 WhatsApp webhook endpoint: POST /api/whatsapp/webhook`)
+      console.log(`🌐 Set OpenWA webhook to: <your-cloudflare-url>/api/whatsapp/webhook\n`)
     })
   })
   .catch((err) => {

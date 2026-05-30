@@ -3,6 +3,7 @@ import { Link, Routes, Route, useNavigate, useLocation } from 'react-router-dom'
 import { LayoutDashboard, ShoppingBag, MessageSquare, Bell, CreditCard, Settings, LogOut, Zap, Clock, Star, ArrowRight, Menu, X, Send, Calendar, Shield, CheckCircle, Search, Check, CheckCheck } from 'lucide-react'
 import { api, loadRazorpayScript } from '../utils/api'
 import Avatar from '../components/Avatar'
+import { DashboardSkeleton, PageLoader, TableSkeleton, SpinnerIcon } from '../components/Loader'
 import './Dashboard.css'
 
 const NAV = [
@@ -544,8 +545,22 @@ function DashBook({ onBookingCreated }) {
 
   if (loading) {
     return (
-      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
-        <p style={{ color: '#E53935' }}>Retrieving live professional buddylist...</p>
+      <div className="dash-content">
+        <div className="sk-box sk-page-title" style={{ marginBottom: '28px' }}></div>
+        <div className="dash-widgets">
+          {Array.from({ length: 4 }).map((_, i) => (
+            <div key={i} className="widget-card skeleton-card">
+              <div className="sk-box sk-icon"></div>
+              <div className="sk-col">
+                <div className="sk-box sk-val"></div>
+                <div className="sk-box sk-label"></div>
+              </div>
+            </div>
+          ))}
+        </div>
+        <div className="dash-card">
+          <TableSkeleton rows={4} cols={4} />
+        </div>
       </div>
     )
   }
@@ -1052,11 +1067,7 @@ function DashMessages({ onMessagesRead }) {
   }
 
   if (loading) {
-    return (
-      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
-        <p>Opening chat terminal...</p>
-      </div>
-    )
+    return <PageLoader message="Opening chat terminal..." />
   }
 
   return (
@@ -1250,8 +1261,8 @@ export default function UserDashboard() {
 
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--gray-950)' }}>
-        <p style={{ color: '#E53935' }}>Retrieving account status...</p>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--gray-950, #0f0f1a)' }}>
+        <DashboardSkeleton widgetCount={4} tableRows={4} tableCols={4} />
       </div>
     )
   }

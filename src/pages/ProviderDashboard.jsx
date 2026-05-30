@@ -4,6 +4,7 @@ import { User, Calendar, Inbox, DollarSign, MessageSquare, Star, LogOut, Zap, Cl
 import { api } from '../utils/api'
 import { loadRazorpayScript } from '../utils/api'
 import Avatar from '../components/Avatar'
+import { PageLoader, DashboardSkeleton, SpinnerIcon } from '../components/Loader'
 import './Dashboard.css'
 import './ProviderDashboard.css'
 
@@ -795,11 +796,7 @@ function DashMessages({ onMessagesRead }) {
   }
 
   if (loading) {
-    return (
-      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
-        <p>Loading active customer threads...</p>
-      </div>
-    )
+    return <PageLoader message="Loading active customer threads..." />
   }
 
   return (
@@ -1026,8 +1023,8 @@ export default function ProviderDashboard() {
 
   if (loading || !currentUser) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--gray-950)' }}>
-        <p style={{ color: '#E53935' }}>Synchronizing professional credentials...</p>
+      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', background: 'var(--gray-50, #f8f9fa)' }}>
+        <DashboardSkeleton widgetCount={4} tableRows={4} tableCols={6} />
       </div>
     )
   }

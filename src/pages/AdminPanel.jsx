@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { Link, Routes, Route, useNavigate, useLocation, useParams } from 'react-router-dom'
 import { LayoutDashboard, Users, Briefcase, Grid, CreditCard, Settings, LogOut, Zap, UserCheck, BarChart2, AlertTriangle, Menu, X, Search, PlayCircle, CheckCircle, History, Mail, MessageSquare } from 'lucide-react'
 import { api } from '../utils/api'
+import { DashboardSkeleton, PageLoader, TableSkeleton, SpinnerIcon } from '../components/Loader'
 import './Dashboard.css'
 
 const NAV = [
@@ -45,11 +46,7 @@ function AdminHome() {
   }, [])
 
   if (loading) {
-    return (
-      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
-        <p>Gathering ledger data...</p>
-      </div>
-    )
+    return <DashboardSkeleton widgetCount={7} tableRows={5} tableCols={7} />
   }
 
   return (
@@ -363,11 +360,7 @@ function UserTable({ title, fetchFn, cols, mapRow }) {
   )
 
   if (loading) {
-    return (
-      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
-        <p>Loading {title} audit records...</p>
-      </div>
-    )
+    return <PageLoader message={`Loading ${title}...`} />
   }
 
   return (
@@ -459,7 +452,7 @@ function AdminBuddyRequests() {
     }
   }
 
-  if (loading) return <div className="dash-loading">Loading buddy requests...</div>
+  if (loading) return <PageLoader message="Loading buddy change requests..." />
 
   return (
     <div className="dash-content">
@@ -582,7 +575,7 @@ function AdminMessagesTrace() {
     return senderName.includes(query) || receiverName.includes(query) || text.includes(query)
   })
 
-  if (loading) return <div className="dash-loading">Loading message tracing logs...</div>
+  if (loading) return <PageLoader message="Loading message audit logs..." />
 
   return (
     <div className="dash-content">
@@ -726,8 +719,11 @@ function AdminRequests() {
 
   if (loading) {
     return (
-      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
-        <p>Retrieving request list...</p>
+      <div className="dash-content">
+        <div className="sk-box sk-page-title" style={{ marginBottom: '28px' }}></div>
+        <div className="dash-card">
+          <TableSkeleton rows={6} cols={8} />
+        </div>
       </div>
     )
   }
@@ -969,11 +965,7 @@ function AdminUserActivity() {
   }, [id])
 
   if (loading) {
-    return (
-      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
-        <p>Analyzing user operational registry...</p>
-      </div>
-    )
+    return <PageLoader message="Analyzing user operational registry..." />
   }
 
   if (error || !data) {
@@ -1185,11 +1177,7 @@ function AdminEnquiries() {
   )
 
   if (loading) {
-    return (
-      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
-        <p>Loading contact enquiries...</p>
-      </div>
-    )
+    return <PageLoader message="Loading contact enquiries..." />
   }
 
   return (
@@ -1323,11 +1311,7 @@ function AdminLogs() {
   )
 
   if (loading) {
-    return (
-      <div className="dash-content" style={{ textAlign: 'center', padding: '60px 0' }}>
-        <p>Loading activity logs registry...</p>
-      </div>
-    )
+    return <PageLoader message="Loading activity logs registry..." />
   }
 
   return (

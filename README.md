@@ -366,3 +366,17 @@ and also the booking is not accepting by the provider.
 
 
 
+26-05-26
+
+i think in super admin panel , the controll or action on record like user is active or in active edit the uesr and provider detail if neededt or delete the uer from record if needed so we want the options in user and provider panel on super adimin.
+
+
+ON message trace system (hat Message Audit Logs) on super admin panel we short is as user based like a user will talk to a provider then the message panel show the uesr list with time stamp ,  and under the user it will open the page who show the provider list of the specific user who talk to providers, then we click on the provider name will show the conversation b/t user and provider. example  user bh-  talk to provider balram singh and raj singh , so first pamel show user based list then  we click on user name then open the list of user based provider , on provider click on provider name then open the conversation , b/t user and provider.
+
+
+on the page of enquiries  weh have two action in progrss and resolve, i want the remark or not of the enquery or we have one more actaion call back late so when we click on call back later we also use the remark  what he say for it.
+
+The Menu Log History must be show in Setting page as a button and we click the button then its open and also have a download Button of the log in excel.
+
+I want a daily data  backup  at mid night and also remove the last backup when new backup was stored. 
+

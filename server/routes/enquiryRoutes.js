@@ -1,6 +1,10 @@
 import express from 'express'
 import Enquiry from '../models/Enquiry.js'
 import { protect, adminOnly } from '../middleware/auth.js'
+import {
+  sendWelcomeToUser,
+  sendEnquiryNotificationToAdmin,
+} from '../utils/whatsappNotify.js'
 
 const router = express.Router()
 
@@ -23,6 +27,12 @@ router.post('/', async (req, res) => {
       message,
       status: 'New'
     })
+
+    // ── WhatsApp Notifications (fire-and-forget, non-blocking) ───────────
+    // 1. Send welcome message to the user (if they gave a phone)
+    sendWelcomeToUser({ name, phone, subject })
+    // 2. Notify admin about the new enquiry
+    sendEnquiryNotificationToAdmin({ name, email, phone, subject, message })
 
     res.status(201).json(enquiry)
   } catch (error) {

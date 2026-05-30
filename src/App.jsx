@@ -7,6 +7,7 @@ import AIChatbot from './components/AIChatbot'
 import StickyCTA from './components/StickyCTA'
 import LeadCapturePopup from './components/LeadCapturePopup'
 import WhatsAppButton from './components/WhatsAppButton'
+import { AppLoader } from './components/Loader'
 
 import Home from './pages/Home'
 import Services from './pages/Services'
@@ -210,9 +211,34 @@ function Layout() {
 }
 
 export default function App() {
+  const [appReady, setAppReady] = useState(false)
+
+  useEffect(() => {
+    // Minimum splash duration to ensure fonts/assets are ready
+    const minSplash = 1200
+    const start = Date.now()
+
+    const handleLoad = () => {
+      const elapsed = Date.now() - start
+      const remaining = Math.max(0, minSplash - elapsed)
+      setTimeout(() => setAppReady(true), remaining)
+    }
+
+    if (document.readyState === 'complete') {
+      handleLoad()
+    } else {
+      window.addEventListener('load', handleLoad, { once: true })
+    }
+
+    return () => window.removeEventListener('load', handleLoad)
+  }, [])
+
   return (
-    <BrowserRouter>
-      <Layout />
-    </BrowserRouter>
+    <>
+      {!appReady && <AppLoader />}
+      <BrowserRouter>
+        <Layout />
+      </BrowserRouter>
+    </>
   )
 }
